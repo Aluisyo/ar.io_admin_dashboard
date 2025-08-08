@@ -38,17 +38,10 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
   const [blockDataError, setBlockDataError] = useState<string>('');
 
   useEffect(() => {
-    // Use NEXT_PUBLIC_GATEWAY_URL as default, fallback to localStorage or default URL
-    const defaultUrl = 
-      process.env.NEXT_PUBLIC_GATEWAY_URL || 
-      (typeof window !== 'undefined' ? localStorage.getItem('ar-io-gateway-url') : '') || 
-      'http://localhost:4000';
-    
-    setGatewayUrl(defaultUrl);
-    
-   
-    if (typeof window !== 'undefined' && localStorage.getItem('ar-io-gateway-url') !== defaultUrl) {
-      localStorage.setItem('ar-io-gateway-url', defaultUrl);
+    // Load gatewayUrl from localStorage on component mount
+    if (typeof window !== 'undefined') {
+      setGatewayUrl(localStorage.getItem('ar-io-gateway-url') || 'http://localhost:4000');
+    }
 
     // Fetch ADMIN_API_KEY from server
     const fetchAdminApiKey = async () => {
