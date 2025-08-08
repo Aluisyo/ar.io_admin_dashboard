@@ -1,0 +1,229 @@
+'use client'
+
+import { useEffect, useState, useRef } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Save, RefreshCw, PlusCircle, Trash2 } from 'lucide-react'
+
+interface ConfigVar {
+  id: number;
+  key: string;
+  value: string;
+}
+
+interface ConfigurationTabProps {
+  service: string
+}
+
+export function ConfigurationTab({ service }: ConfigurationTabProps) {
+  const [configVars, setConfigVars] = useState<ConfigVar[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const nextIdRef = useRef(0);
+
+  // Define services that share the main .env file
+  const SHARED_ENV_SERVICES = [
+    'gateway',
+    'observer',
+    'envoy',
+    'autoheal',
+    'clickhouse',
+    'litestream',
+    'grafana',
+    'admin' // Assuming admin also uses the main .env if no specific one is mentioned
+  ];
+
+  const getConfigFile = (service: string) => {
+    if (SHARED_ENV_SERVICES.includes(service)) {
+      return '.env';
+    }
+    if (service === 'ao-cu') return '.env.ao';
+    if (service === 'bundler') return '.env.bundler';
+    return '.env'; // Fallback, though SHARED_ENV_SERVICES should cover most
+  };
+
+  const getConfigDescription = (service: string) => {
+    const configFile = getConfigFile(service);
+    if (configFile === '.env') {
+      const sharedServicesNames = SHARED_ENV_SERVICES.map(s => {
+        const names: Record<string, string> = {
+          gateway: 'Gateway',
+          observer: 'Observer',
+          envoy: 'Envoy',
+          autoheal: 'Autoheal',
+          clickhouse: 'Clickhouse',
+          litestream: 'Litestream',
+          grafana: 'Grafana',
+          admin: 'Admin Dashboard'
+        };
+        return names[s] || s;
+      }).join(', ');
+      return `This configuration (${configFile}) is shared across: ${sharedServicesNames}.`;
+    } else {
+      return `Edit the ${configFile} file for the ${service} service.`;
+    }
+  };
+
+  const fetchConfig = async () => {
+    setLoading(true);
+    setMessage('');
+    try {
+      const configFile = getConfigFile(service);
+      const response = await fetch(`/api/config/${service}?file=${configFile}`);
+      if (response.ok) {
+        const data: Record<string, string> = await response.json();
+        const parsedVars: ConfigVar[] = Object.entries(data).map(([key, value], index) => ({
+          id: index,
+          key,
+          value,
+        }));
+        nextIdRef.current = parsedVars.length;
+        setConfigVars(parsedVars);
+      } else {
+        setConfigVars([]);
+        setMessage('Failed to fetch configuration. Starting with empty.');
+      }
+    } catch (error) {
+      console.error('Failed to fetch configuration:', error);
+      setConfigVars([]);
+      setMessage('Error fetching configuration. Starting with empty.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchConfig();
+  }, [service]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMessage('');
+
+    try {
+      const updates: Record<string, string> = {};
+      configVars.forEach(v => {
+        if (v.key.trim() !== '') {
+          updates[v.key.trim()] = v.value;
+        }
+      });
+
+      const configFile = getConfigFile(service);
+      const response = await fetch(`/api/config/${service}?file=${configFile}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      });
+
+      if (response.ok) {
+        setMessage('Configuration saved successfully!');
+        await fetchConfig(); // Re-fetch to ensure UI reflects exactly what's in the .env file
+      } else {
+        const errorData = await response.json();
+        setMessage(`Failed to save configuration: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error: any) {
+      setMessage(`Error saving configuration: ${error.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddVariable = () => {
+    setConfigVars(prev => [...prev, { id: nextIdRef.current++, key: '', value: '' }]);
+  };
+
+  const handleRemoveVariable = (idToRemove: number) => {
+    setConfigVars(prev => prev.filter(v => v.id !== idToRemove));
+  };
+
+  const handleVariableChange = (id: number, field: 'key' | 'value', newValue: string) => {
+    setConfigVars(prev =>
+      prev.map(v => (v.id === id ? { ...v, [field]: newValue } : v))
+    );
+  };
+
+  if (loading) {
+    return <div>Loading configuration...</div>;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Environment Configuration</CardTitle>
+        <CardDescription className="text-gray-300">
+          {getConfigDescription(service)}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex gap-2">
+          <Button onClick={handleSave} disabled={saving}>
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+          <Button onClick={fetchConfig} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button onClick={handleAddVariable} variant="outline">
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Add Variable
+          </Button>
+        </div>
+
+        {message && (
+          <Alert className="mt-2">
+            <AlertDescription>{message}</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="space-y-3">
+          {configVars.length === 0 && !loading && (
+            <div className="text-center py-8 text-gray-400">
+              <p>No configuration variables found. Click "Add Variable" to start.</p>
+            </div>
+          )}
+          {configVars.map((configVar) => (
+            <div key={configVar.id} className="flex items-end gap-2">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor={`key-${configVar.id}`} className="sr-only">Key</Label>
+                <Input
+                  id={`key-${configVar.id}`}
+                  placeholder="KEY_NAME"
+                  value={configVar.key}
+                  onChange={(e) => handleVariableChange(configVar.id, 'key', e.target.value)}
+                  className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-400"
+                />
+              </div>
+              <div className="flex-1 space-y-1">
+                <Label htmlFor={`value-${configVar.id}`} className="sr-only">Value</Label>
+                <Input
+                  id={`value-${configVar.id}`}
+                  placeholder="value"
+                  value={configVar.value}
+                  onChange={(e) => handleVariableChange(configVar.id, 'value', e.target.value)}
+                  className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-400"
+                />
+              </div>
+              <Button
+                variant="destructive"
+                size="icon"
+                onClick={() => handleRemoveVariable(configVar.id)}
+                className="shrink-0"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="sr-only">Remove variable</span>
+              </Button>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
