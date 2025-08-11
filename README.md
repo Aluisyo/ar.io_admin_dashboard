@@ -27,7 +27,7 @@ AR.IO Gateway Admin Dashboard provides a web UI to monitor, control, and inspect
    ```dotenv
    ADMIN_USERNAME=admin
    ADMIN_PASSWORD=admin
-   NEXTAUTH_SECRET=your-secret-key
+   NEXTAUTH_SECRET=your-secret-key  #generate with: openssl rand -base64 32
    NEXTAUTH_URL=http://localhost:3001
    AR_IO_NODE_PATH=/tmp/ar-io-node
    DOCKER_PROJECT=ar-io-node
