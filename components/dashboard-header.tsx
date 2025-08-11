@@ -67,11 +67,19 @@ export function DashboardHeader() {
 
   const handleMarkAllAsRead = async () => {
     try {
-      const response = await fetch('/api/notifications/mark-all-read', {
+      const response = await fetch('/api/notifications', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'mark-all-read' }),
       });
       if (response.ok) {
         setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        // Also force a re-fetch to make sure we're in sync
+        setTimeout(() => {
+          fetchNotifications();
+        }, 100);
       }
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);

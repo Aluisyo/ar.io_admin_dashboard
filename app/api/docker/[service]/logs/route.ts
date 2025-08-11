@@ -20,6 +20,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const keyword = searchParams.get('keyword');
     const logLevel = searchParams.get('level'); // Get log level from query params
+    const exportAll = searchParams.get('exportAll') === 'true'; // Check if we want all logs
     
     // First try to find the container using docker compose
     const { stdout: composeOutput } = await execAsync(`docker compose -p ar-io-node ps ${service} --format "{{.Name}}" 2>/dev/null || echo ""`)
@@ -37,17 +38,27 @@ export async function GET(
         'grafana': 'ar-io-node-grafana-1',
         'ao-cu': 'ar-io-node-ao-cu-1',
         'bundler': 'ar-io-node-upload-service-1',
-        'admin': 'ar-io-node-admin-1'
+        'admin': 'ar-io-node-admin-dashboard-1'
       }
       containerName = containerMap[service] || `ar-io-node-${service}-1`
     }
 
     // Base docker logs command
     let logsCommand: string;
-    if (service === 'envoy') {
-      logsCommand = `docker compose -p ar-io-node logs --tail 100 ${service} 2>/dev/null || docker logs --tail 100 ${containerName} 2>&1`;
+    if (exportAll) {
+      // For full export, don't limit the number of lines
+      if (service === 'envoy') {
+        logsCommand = `docker compose -p ar-io-node logs ${service} 2>/dev/null || docker logs ${containerName} 2>&1`;
+      } else {
+        logsCommand = `docker logs ${containerName} 2>&1`;
+      }
     } else {
-      logsCommand = `docker logs --tail 100 ${containerName} 2>&1`;
+      // For regular viewing, limit to last 100 lines
+      if (service === 'envoy') {
+        logsCommand = `docker compose -p ar-io-node logs --tail 100 ${service} 2>/dev/null || docker logs --tail 100 ${containerName} 2>&1`;
+      } else {
+        logsCommand = `docker logs --tail 100 ${containerName} 2>&1`;
+      }
     }
 
     // Apply log level filter

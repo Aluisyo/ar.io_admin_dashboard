@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Save, RefreshCw, PlusCircle, Trash2 } from 'lucide-react'
+import { Save, RefreshCw, PlusCircle, Trash2, Info } from 'lucide-react'
 
 interface ConfigVar {
   id: number;
@@ -25,6 +25,18 @@ export function ConfigurationTab({ service }: ConfigurationTabProps) {
   const [message, setMessage] = useState('');
   const nextIdRef = useRef(0);
 
+  // Common admin dashboard environment variables with descriptions
+  const ADMIN_ENV_HINTS: Record<string, string> = {
+    'ADMIN_USERNAME': 'Username for dashboard login authentication',
+    'ADMIN_PASSWORD': 'Password for dashboard login authentication', 
+    'NEXTAUTH_SECRET': 'Secret key for NextAuth session encryption (generate with: openssl rand -base64 32)',
+    'NEXTAUTH_URL': 'Base URL where the admin dashboard is hosted (e.g., http://localhost:3001)',
+    'AR_IO_NODE_PATH': 'Path to the AR.IO node directory (default: /tmp/ar-io-node)',
+    'DOCKER_PROJECT': 'Docker Compose project name (default: ar-io-node)',
+    'NEXT_PUBLIC_GRAFANA_URL': 'Public URL for Grafana dashboard (e.g., http://localhost:1024)',
+    'ADMIN_API_KEY': 'API key for AR.IO admin endpoints - must match gateway configuration'
+  };
+
   // Define services that share the main .env file
   const SHARED_ENV_SERVICES = [
     'gateway',
@@ -33,14 +45,14 @@ export function ConfigurationTab({ service }: ConfigurationTabProps) {
     'autoheal',
     'clickhouse',
     'litestream',
-    'grafana',
-    'admin' // Assuming admin also uses the main .env if no specific one is mentioned
+    'grafana'
   ];
 
   const getConfigFile = (service: string) => {
     if (SHARED_ENV_SERVICES.includes(service)) {
       return '.env';
     }
+    if (service === 'admin') return '.env.dashboard';
     if (service === 'ao-cu') return '.env.ao';
     if (service === 'bundler') return '.env.bundler';
     return '.env'; // Fallback, though SHARED_ENV_SERVICES should cover most
@@ -57,12 +69,13 @@ export function ConfigurationTab({ service }: ConfigurationTabProps) {
           autoheal: 'Autoheal',
           clickhouse: 'Clickhouse',
           litestream: 'Litestream',
-          grafana: 'Grafana',
-          admin: 'Admin Dashboard'
+          grafana: 'Grafana'
         };
         return names[s] || s;
       }).join(', ');
       return `This configuration (${configFile}) is shared across: ${sharedServicesNames}.`;
+    } else if (service === 'admin') {
+      return `Edit the Admin Dashboard configuration (${configFile}) that controls authentication, API keys, and dashboard settings.`;
     } else {
       return `Edit the ${configFile} file for the ${service} service.`;
     }
@@ -182,6 +195,15 @@ export function ConfigurationTab({ service }: ConfigurationTabProps) {
             <AlertDescription>{message}</AlertDescription>
           </Alert>
         )}
+        
+        {service === 'admin' && (
+          <Alert className="border-yellow-600 bg-yellow-950/20">
+            <AlertDescription className="text-yellow-200">
+              <strong>Important:</strong> Changes to the Admin Dashboard configuration require restarting the admin service to take effect. 
+              Some changes (like NEXTAUTH_SECRET) may require clearing browser sessions.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="space-y-3">
           {configVars.length === 0 && !loading && (
@@ -203,13 +225,24 @@ export function ConfigurationTab({ service }: ConfigurationTabProps) {
               </div>
               <div className="flex-1 space-y-1">
                 <Label htmlFor={`value-${configVar.id}`} className="sr-only">Value</Label>
-                <Input
-                  id={`value-${configVar.id}`}
-                  placeholder="value"
-                  value={configVar.value}
-                  onChange={(e) => handleVariableChange(configVar.id, 'value', e.target.value)}
-                  className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-400"
-                />
+                <div className="relative">
+                  <Input
+                    id={`value-${configVar.id}`}
+                    placeholder="value"
+                    value={configVar.value}
+                    onChange={(e) => handleVariableChange(configVar.id, 'value', e.target.value)}
+                    className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-400"
+                    type={configVar.key.toLowerCase().includes('password') || configVar.key.toLowerCase().includes('secret') ? 'password' : 'text'}
+                  />
+                  {service === 'admin' && ADMIN_ENV_HINTS[configVar.key] && (
+                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                      <Info className="h-4 w-4 text-gray-400" title={ADMIN_ENV_HINTS[configVar.key]} />
+                    </div>
+                  )}
+                </div>
+                {service === 'admin' && ADMIN_ENV_HINTS[configVar.key] && (
+                  <p className="text-xs text-gray-400 mt-1">{ADMIN_ENV_HINTS[configVar.key]}</p>
+                )}
               </div>
               <Button
                 variant="destructive"

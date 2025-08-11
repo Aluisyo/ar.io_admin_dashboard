@@ -44,7 +44,7 @@ export async function GET(
         'grafana': 'ar-io-node-grafana-1',
         'ao-cu': 'ar-io-node-ao-cu-1',
         'bundler': 'ar-io-node-upload-service-1',
-        'admin': 'ar-io-node-admin-1'
+        'admin': 'ar-io-node-admin-dashboard-1'
       }
       containerName = containerMap[service] || `ar-io-node-${service}-1`
     }
