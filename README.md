@@ -81,7 +81,11 @@ This uses:
 docker-compose pull
 docker-compose up
 ```
+or
 
+```bash
+docker run -d --name ar-io-admin-dashboard --network ar-io-network -p 3001:3001 -v /var/run/docker.sock:/var/run/docker.sock -v /tmp/ar-io-node:/tmp/ar-io-node aluisyo/ar-io-admin-dashboard:latest
+```
 
 ## License
 

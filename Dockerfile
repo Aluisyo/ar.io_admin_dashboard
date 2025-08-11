@@ -13,9 +13,8 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Update package index and install dependencies with retry logic
 RUN apk update && \
-    apk add --no-cache --retry 3 --timeout 30 \
+    apk add \
         docker-cli \
         docker-compose \
         git \
