@@ -13,8 +13,15 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-
-RUN apk add --no-cache docker-cli docker-compose git bash
+# Update package index and install dependencies with retry logic
+RUN apk update && \
+    apk add --no-cache --retry 3 --timeout 30 \
+        docker-cli \
+        docker-compose \
+        git \
+        bash \
+        curl \
+        wget
 
 
 COPY --from=builder /app/package.json ./

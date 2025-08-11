@@ -97,6 +97,31 @@ function parsePrometheusMetrics(metricsText: string): Record<string, any[]> {
   return result
 }
 
+async function tryFetchMetrics(urls: string[]): Promise<{ response: Response, url: string } | null> {
+  for (const url of urls) {
+    try {
+      console.log(`Trying metrics endpoint: ${url}`)
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'text/plain',
+        },
+        signal: AbortSignal.timeout(5000)
+      })
+      
+      if (response.ok) {
+        console.log(`Successfully connected to: ${url}`)
+        return { response, url }
+      } else {
+        console.log(`Failed to fetch from ${url}: HTTP ${response.status}`)
+      }
+    } catch (error) {
+      console.log(`Error fetching from ${url}:`, error instanceof Error ? error.message : error)
+    }
+  }
+  return null
+}
+
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) {
@@ -104,28 +129,43 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Try AR.IO Gateway metrics first (most important)
-    let metricsUrl = 'http://localhost:3000/ar-io/__gateway_metrics'
-    let response = await fetch(metricsUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'text/plain',
-      },
-      // Add timeout to prevent hanging
-      signal: AbortSignal.timeout(5000)
-    })
+    // Define possible endpoints for AR.IO Gateway metrics
+    // Try Docker network hostname first, then localhost
+    const gatewayUrls = [
+      'http://envoy:3000/ar-io/__gateway_metrics',     // Docker network
+      'http://localhost:3000/ar-io/__gateway_metrics', // Local development
+      'http://core:4000/ar-io/__gateway_metrics',      // Direct to core service
+      'http://localhost:4000/ar-io/__gateway_metrics'  // Local core service
+    ]
     
-    // If AR.IO gateway metrics fail, fallback to node-exporter (system metrics)
-    if (!response.ok) {
+    // Try AR.IO Gateway metrics first (most important)
+    let result = await tryFetchMetrics(gatewayUrls)
+    let response: Response
+    let metricsUrl: string
+    
+    if (result) {
+      response = result.response
+      metricsUrl = result.url
+    } else {
+      // Fallback to node-exporter (system metrics)
       console.log('AR.IO Gateway metrics not available, trying node-exporter...')
-      metricsUrl = 'http://localhost:9100/metrics'
-      response = await fetch(metricsUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'text/plain',
-        },
-        signal: AbortSignal.timeout(5000)
-      })
+      const nodeExporterUrls = [
+        'http://node-exporter:9100/metrics',  // Docker network
+        'http://localhost:9100/metrics'       // Local development
+      ]
+      
+      result = await tryFetchMetrics(nodeExporterUrls)
+      if (result) {
+        response = result.response
+        metricsUrl = result.url
+      } else {
+        return NextResponse.json({ 
+          error: 'No Prometheus metrics endpoints available',
+          details: 'Tried AR.IO Gateway and Node Exporter endpoints',
+          attempted_urls: [...gatewayUrls, ...nodeExporterUrls],
+          available: false
+        }, { status: 503 })
+      }
     }
 
     if (!response.ok) {
