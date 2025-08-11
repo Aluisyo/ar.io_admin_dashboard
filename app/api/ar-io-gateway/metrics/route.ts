@@ -100,14 +100,22 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Try both common ports for AR.IO Gateway
-    const ports = [3000, 4000]
+    // Define possible endpoints for AR.IO Gateway metrics
+    // Try Docker network hostnames first, then localhost
+    const metricsUrls = [
+      'http://envoy:3000/ar-io/__gateway_metrics',     // Docker network (primary)
+      'http://core:4000/ar-io/__gateway_metrics',      // Docker network (direct to core)
+      'http://localhost:3000/ar-io/__gateway_metrics', // Local development
+      'http://localhost:4000/ar-io/__gateway_metrics'  // Local development (direct)
+    ]
+    
     let gatewayMetrics = null
     let lastError = null
+    let connectedUrl = null
 
-    for (const port of ports) {
+    for (const metricsUrl of metricsUrls) {
       try {
-        const metricsUrl = `http://localhost:${port}/ar-io/__gateway_metrics`
+        console.log(`Trying AR.IO Gateway metrics at: ${metricsUrl}`)
         const response = await fetch(metricsUrl, {
           method: 'GET',
           headers: {
@@ -118,17 +126,20 @@ export async function GET(request: NextRequest) {
         })
 
         if (response.ok) {
+          console.log(`Successfully connected to AR.IO Gateway metrics at: ${metricsUrl}`)
           const metricsText = await response.text()
           gatewayMetrics = parsePrometheusMetrics(metricsText)
           gatewayMetrics._rawMetrics = metricsText // Keep raw text for debugging
-          gatewayMetrics._connectedPort = port // Track which port worked
+          connectedUrl = metricsUrl
           break // Success, exit loop
         } else {
+          console.log(`Failed to fetch from ${metricsUrl}: HTTP ${response.status}`)
           lastError = `HTTP ${response.status}: ${response.statusText}`
         }
       } catch (error: any) {
+        console.log(`Error fetching from ${metricsUrl}:`, error.message)
         lastError = error.message
-        continue // Try next port
+        continue // Try next URL
       }
     }
 
@@ -142,7 +153,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       available: true,
-      port: gatewayMetrics._connectedPort || 'unknown',
+      connectedUrl: connectedUrl,
       metrics: gatewayMetrics,
       timestamp: new Date().toISOString(),
       metricsCount: Object.keys(gatewayMetrics).filter(key => !key.startsWith('_')).length

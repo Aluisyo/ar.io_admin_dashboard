@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { Providers } from '@/components/providers' 
+import { Providers } from '@/components/providers' // Import the new Providers component
 
-
+// const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'AR.IO Gateway Admin Dashboard',

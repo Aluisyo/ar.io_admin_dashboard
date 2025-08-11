@@ -9,14 +9,22 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Try both common ports for AR.IO Gateway
-    const ports = [3000, 4000]
+    // Define possible endpoints for AR.IO Gateway info
+    // Try Docker network hostnames first, then localhost
+    const infoUrls = [
+      'http://envoy:3000/ar-io/info',          // Docker network (primary)
+      'http://core:4000/ar-io/info',           // Docker network (direct to core)
+      'http://localhost:3000/ar-io/info',      // Local development
+      'http://localhost:4000/ar-io/info'       // Local development (direct)
+    ]
+    
     let gatewayInfo = null
     let lastError = null
+    let connectedUrl = null
 
-    for (const port of ports) {
+    for (const infoUrl of infoUrls) {
       try {
-        const infoUrl = `http://localhost:${port}/ar-io/info`
+        console.log(`Trying AR.IO Gateway info at: ${infoUrl}`)
         const response = await fetch(infoUrl, {
           method: 'GET',
           headers: {
@@ -27,15 +35,18 @@ export async function GET(request: NextRequest) {
         })
 
         if (response.ok) {
+          console.log(`Successfully connected to AR.IO Gateway info at: ${infoUrl}`)
           gatewayInfo = await response.json()
-          gatewayInfo._connectedPort = port // Track which port worked
+          connectedUrl = infoUrl
           break // Success, exit loop
         } else {
+          console.log(`Failed to fetch from ${infoUrl}: HTTP ${response.status}`)
           lastError = `HTTP ${response.status}: ${response.statusText}`
         }
       } catch (error: any) {
+        console.log(`Error fetching from ${infoUrl}:`, error.message)
         lastError = error.message
-        continue // Try next port
+        continue // Try next URL
       }
     }
 
@@ -49,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       available: true,
-      port: gatewayInfo._connectedPort || 'unknown',
+      connectedUrl: connectedUrl,
       info: gatewayInfo,
       timestamp: new Date().toISOString()
     })
