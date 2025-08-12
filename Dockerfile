@@ -20,8 +20,10 @@ RUN apk update && \
         git \
         bash \
         curl \
-        wget
-
+        wget \
+        sqlite && \
+    curl -L https://clickhouse.com/cli -o /usr/local/bin/clickhouse-client && \
+    chmod +x /usr/local/bin/clickhouse-client
 
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
