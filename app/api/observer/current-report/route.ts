@@ -11,6 +11,7 @@ interface ObserverReport {
 }
 
 const OBSERVER_ENDPOINTS = [
+  'http://ar-io-node-observer-1:5050/ar-io/observer/reports/current',  // Docker service name (full container name)
   'http://observer:5050/ar-io/observer/reports/current',
   'http://localhost:5050/ar-io/observer/reports/current',
   'http://127.0.0.1:5050/ar-io/observer/reports/current'
@@ -48,6 +49,31 @@ export async function GET(request: NextRequest) {
       
       if (response.ok) {
         const fullData = await response.json()
+        
+        // Check if observer is still pending
+        if (fullData.message && fullData.message === 'Report pending') {
+          console.log(`Observer report pending from: ${endpoint}`)
+          return NextResponse.json({
+            success: false,
+            error: 'Observer report is still pending. The observer service is starting up.',
+            endpoint,
+            endpoints
+          }, { status: 202 })
+        }
+        
+        // Validate that we have the required fields
+        const requiredFields = ['formatVersion', 'observerAddress', 'epochIndex', 'epochStartTimestamp', 'epochStartHeight', 'epochEndTimestamp', 'generatedAt']
+        const missingFields = requiredFields.filter(field => fullData[field] === undefined || fullData[field] === null)
+        
+        if (missingFields.length > 0) {
+          console.log(`Observer data incomplete from ${endpoint}, missing fields: ${missingFields.join(', ')}`)
+          return NextResponse.json({
+            success: false,
+            error: `Observer data incomplete. Missing fields: ${missingFields.join(', ')}`,
+            endpoint,
+            endpoints
+          }, { status: 202 })
+        }
         
         // Extract only the fields we need
         const data: ObserverReport = {

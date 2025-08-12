@@ -10,7 +10,8 @@ export async function GET() {
 
   // Try multiple endpoints for compatibility between docker and localhost
   const endpoints = [
-    'http://bundler:5100',      // Docker service name
+    'http://ar-io-node-upload-service-1:5100',  // Docker service name (full container name)
+    'http://bundler:5100',      // Docker service name (short alias, if configured)
     'http://localhost:5100',    // Localhost
     'http://127.0.0.1:5100'     // Alternative localhost
   ];

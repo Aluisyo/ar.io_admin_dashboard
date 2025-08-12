@@ -64,11 +64,17 @@ export function ObserverInfoCard() {
   }, [])
 
   const formatTimestamp = (timestamp: number): string => {
+    if (!timestamp || isNaN(timestamp)) {
+      return 'N/A'
+    }
     const date = new Date(timestamp)
     return date.toLocaleString()
   }
 
   const getRelativeTime = (timestamp: number): string => {
+    if (!timestamp || isNaN(timestamp)) {
+      return 'N/A'
+    }
     const now = Date.now()
     const diff = Math.abs(now - timestamp) // Use absolute value for future times
     const seconds = Math.floor(diff / 1000)
@@ -151,7 +157,7 @@ export function ObserverInfoCard() {
   }
 
   const currentTime = Date.now()
-  const epochProgress = getEpochProgress(data.epochStartTimestamp, data.epochEndTimestamp, currentTime)
+  const epochProgress = getEpochProgress(data.epochStartTimestamp || 0, data.epochEndTimestamp || 0, currentTime)
 
   return (
     <Card>
@@ -171,7 +177,7 @@ export function ObserverInfoCard() {
                 Format Version
               </Badge>
               <div className="text-lg font-semibold text-white">
-                v{data.formatVersion}
+                v{data.formatVersion ?? 'N/A'}
               </div>
             </div>
             <div className="space-y-2">
@@ -182,7 +188,7 @@ export function ObserverInfoCard() {
                 </Badge>
               </div>
               <div className="text-lg font-semibold text-white">
-                #{data.epochIndex}
+                #{data.epochIndex ?? 'N/A'}
               </div>
             </div>
             <div className="space-y-2">
@@ -190,7 +196,7 @@ export function ObserverInfoCard() {
                 Start Height
               </Badge>
               <div className="text-lg font-semibold text-white">
-                {data.epochStartHeight.toLocaleString()}
+                {data.epochStartHeight?.toLocaleString() ?? 'N/A'}
               </div>
             </div>
             <div className="space-y-2">
@@ -215,9 +221,9 @@ export function ObserverInfoCard() {
               </Badge>
             </div>
             <div className="flex items-center gap-2 p-3 bg-gray-800 rounded-lg">
-              <div className="text-sm font-mono text-white flex-1 break-all leading-relaxed">
-                {data.observerAddress}
-              </div>
+            <div className="text-sm font-mono text-white flex-1 break-all leading-relaxed">
+              {data.observerAddress || 'N/A'}
+            </div>
               <Button
                 variant="ghost"
                 size="sm"

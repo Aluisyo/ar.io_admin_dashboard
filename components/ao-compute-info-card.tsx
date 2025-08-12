@@ -59,11 +59,17 @@ export function AOComputeInfoCard() {
   }, [])
 
   const formatTimestamp = (timestamp: number): string => {
+    if (!timestamp || isNaN(timestamp)) {
+      return 'N/A'
+    }
     const date = new Date(timestamp)
     return date.toLocaleString()
   }
 
   const getRelativeTime = (timestamp: number): string => {
+    if (!timestamp || isNaN(timestamp)) {
+      return 'N/A'
+    }
     const now = Date.now()
     const diff = now - timestamp
     const seconds = Math.floor(diff / 1000)
@@ -155,7 +161,7 @@ export function AOComputeInfoCard() {
             </div>
             <div className="flex items-start gap-2">
               <div className="text-sm font-mono text-white break-all flex-1">
-                {data.address}
+                {data.address || 'N/A'}
               </div>
               <Button
                 variant="ghost"

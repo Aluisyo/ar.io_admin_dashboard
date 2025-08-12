@@ -103,8 +103,10 @@ export async function GET(request: NextRequest) {
     // Define possible endpoints for AR.IO Gateway metrics
     // Try Docker network hostnames first, then localhost
     const metricsUrls = [
-      'http://envoy:3000/ar-io/__gateway_metrics',     // Docker network (primary)
-      'http://core:4000/ar-io/__gateway_metrics',      // Docker network (direct to core)
+      'http://ar-io-node-envoy-1:3000/ar-io/__gateway_metrics',     // Docker network (primary - full container name)
+      'http://ar-io-node-core-1:4000/ar-io/__gateway_metrics',      // Docker network (direct to core - full container name)
+      'http://envoy:3000/ar-io/__gateway_metrics',     // Docker network (primary - short alias)
+      'http://core:4000/ar-io/__gateway_metrics',      // Docker network (direct to core - short alias)
       'http://localhost:3000/ar-io/__gateway_metrics', // Local development
       'http://localhost:4000/ar-io/__gateway_metrics'  // Local development (direct)
     ]

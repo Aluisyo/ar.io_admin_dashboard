@@ -27,25 +27,33 @@ export function DashboardHeader() {
   useEffect(() => {
     const fetchGatewayVersion = async () => {
       try {
-        const gatewayUrl = localStorage.getItem('ar-io-gateway-url') || 'http://localhost:4000';
-        console.log('DashboardHeader: gatewayUrl', gatewayUrl);
-        console.log('DashboardHeader: info endpoint', gatewayUrl + '/ar-io/info');
-        const response = await fetch(`${gatewayUrl.replace(/\/+$/, '')}/ar-io/info`);
-        console.log('DashboardHeader: info fetch status', response.status, response.statusText);
+        console.log('DashboardHeader: Fetching gateway info from API');
+        const response = await fetch('/api/ar-io-gateway/info');
+        console.log('DashboardHeader: API response status', response.status, response.statusText);
         if (response.ok) {
           const data = await response.json();
-          setGatewayVersion(data.release || 'Unknown');
-          console.log('DashboardHeader: setGatewayVersion', data.release || 'Unknown');
+          console.log('DashboardHeader: API response data', data);
+          if (data.available && data.info) {
+            setGatewayVersion(data.info.release || 'Unknown');
+            console.log('DashboardHeader: setGatewayVersion', data.info.release || 'Unknown');
+          } else {
+            console.warn('DashboardHeader: Gateway not available', data.error || 'No error info');
+            setGatewayVersion('Unavailable');
+          }
         } else {
-          console.error('DashboardHeader: info fetch failed', response.status, response.statusText);
-          setGatewayVersion('Unknown');
+          console.error('DashboardHeader: API fetch failed', response.status, response.statusText);
+          setGatewayVersion('Error');
         }
       } catch (error) {
         console.error('Failed to fetch gateway version:', error);
-        setGatewayVersion('Unknown');
+        setGatewayVersion('Error');
       }
     };
     fetchGatewayVersion();
+    
+    // Refresh every 60 seconds
+    const interval = setInterval(fetchGatewayVersion, 60000);
+    return () => clearInterval(interval);
   }, []);
   const fetchNotifications = async () => {
     try {

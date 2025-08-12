@@ -63,7 +63,7 @@ export function BundlerServiceInfoCard() {
   }, [])
 
   const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes'
+    if (!bytes || isNaN(bytes) || bytes === 0) return '0 Bytes'
     const k = 1024
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
@@ -151,7 +151,7 @@ export function BundlerServiceInfoCard() {
               </Badge>
             </div>
             <div className="text-lg font-semibold text-white">
-              {data.version}
+              {data.version || 'N/A'}
             </div>
           </div>
 
@@ -165,12 +165,12 @@ export function BundlerServiceInfoCard() {
             </div>
             <div className="flex items-start gap-2">
               <div className="text-sm font-mono text-white break-all flex-1">
-                {data.addresses.arweave}
+                {data.addresses?.arweave || 'N/A'}
               </div>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigator.clipboard.writeText(data.addresses.arweave)}
+                onClick={() => navigator.clipboard.writeText(data.addresses?.arweave || '')}
                 className="h-6 w-6 p-0 text-gray-400 hover:text-white flex-shrink-0"
                 title="Copy address to clipboard"
               >
@@ -188,7 +188,7 @@ export function BundlerServiceInfoCard() {
               </Badge>
             </div>
             <div className="text-lg font-semibold text-white">
-              {data.gateway}
+              {data.gateway || 'N/A'}
             </div>
           </div>
 
@@ -201,7 +201,7 @@ export function BundlerServiceInfoCard() {
               </Badge>
             </div>
             <div className="text-lg font-semibold text-white">
-              {formatBytes(data.freeUploadLimitBytes)}
+              {formatBytes(data.freeUploadLimitBytes || 0)}
             </div>
           </div>
         </div>
