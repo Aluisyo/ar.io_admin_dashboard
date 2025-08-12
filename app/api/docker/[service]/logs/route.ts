@@ -21,6 +21,8 @@ export async function GET(
     const keyword = searchParams.get('keyword');
     const logLevel = searchParams.get('level'); // Get log level from query params
     const exportAll = searchParams.get('exportAll') === 'true'; // Check if we want all logs
+    const isTailing = searchParams.get('tail') === 'true'; // Check if this is a tailing request
+    const sinceTimestamp = searchParams.get('since'); // Get since timestamp for tailing
     
     // First try to find the container using docker compose
     const { stdout: composeOutput } = await execAsync(`docker compose -p ar-io-node ps ${service} --format "{{.Name}}" 2>/dev/null || echo ""`)
@@ -51,6 +53,15 @@ export async function GET(
         logsCommand = `docker compose -p ar-io-node logs ${service} 2>/dev/null || docker logs ${containerName} 2>&1`;
       } else {
         logsCommand = `docker logs ${containerName} 2>&1`;
+      }
+    } else if (isTailing && sinceTimestamp) {
+      // For tailing, get logs since the specified timestamp
+      const sinceDate = new Date(sinceTimestamp);
+      const sinceSeconds = Math.floor(sinceDate.getTime() / 1000) - 10; // Go back 10 seconds to avoid missing logs
+      if (service === 'envoy') {
+        logsCommand = `docker compose -p ar-io-node logs --since ${sinceSeconds} ${service} 2>/dev/null || docker logs --since ${sinceSeconds} ${containerName} 2>&1`;
+      } else {
+        logsCommand = `docker logs --since ${sinceSeconds} ${containerName} 2>&1`;
       }
     } else {
       // For regular viewing, limit to last 100 lines

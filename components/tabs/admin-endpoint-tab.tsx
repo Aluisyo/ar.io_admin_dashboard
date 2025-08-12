@@ -1,7 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ExternalLink, Bug, Send, Ban, Save, Server } from 'lucide-react'
+import { Bug, Send, Ban, Package, FileSearch, Shield, ShieldOff, Database, Download, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,79 +15,69 @@ interface AdminEndpointTabProps {
 
 export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
   const [gatewayUrl, setGatewayUrl] = useState<string>('');
-  const [adminApiKey, setAdminApiKey] = useState<string>(''); // This will be fetched
-  const [settingsMessage, setSettingsMessage] = useState<string>('');
+  const [adminApiKey, setAdminApiKey] = useState<string>('');
 
-  // Debug state
-  const [debugResponse, setDebugResponse] = useState<string>('');
-  const [debugLoading, setDebugLoading] = useState(false);
-  const [debugError, setDebugError] = useState<string>('');
-
-  // Queue TX state
-  const [queueTxId, setQueueTxId] = useState<string>('');
-  const [queueTxResponse, setQueueTxResponse] = useState<string>('');
-  const [queueTxLoading, setQueueTxLoading] = useState(false);
-  const [queueTxError, setQueueTxError] = useState<string>('');
-
-  // Block Data state
-  const [blockDataId, setBlockDataId] = useState<string>('');
-  const [blockDataNotes, setBlockDataNotes] = useState<string>('');
-  const [blockDataSource, setBlockDataSource] = useState<string>('');
-  const [blockDataResponse, setBlockDataResponse] = useState<string>('');
-  const [blockDataLoading, setBlockDataLoading] = useState(false);
-  const [blockDataError, setBlockDataError] = useState<string>('');
+  // State management for all admin endpoints
+  const [states, setStates] = useState({
+    debug: { response: '', loading: false, error: '' },
+    queueTx: { id: '', response: '', loading: false, error: '' },
+    blockData: { id: '', notes: '', source: '', response: '', loading: false, error: '' },
+    queueBundle: { id: '', response: '', loading: false, error: '' },
+    queueDataItem: { dataItemsJson: '', response: '', loading: false, error: '' },
+    bundleStatus: { id: '', response: '', loading: false, error: '' },
+    blockName: { name: '', notes: '', source: '', response: '', loading: false, error: '' },
+    unblockName: { name: '', response: '', loading: false, error: '' },
+    exportParquet: { outputDir: '', startHeight: '', endHeight: '', maxFileRows: '', response: '', loading: false, error: '' },
+    exportStatus: { response: '', loading: false, error: '' },
+    pruneData: { indexedAtThreshold: '', response: '', loading: false, error: '' }
+  });
 
   useEffect(() => {
-    // Load gatewayUrl from localStorage on component mount
-    if (typeof window !== 'undefined') {
-      setGatewayUrl(localStorage.getItem('ar-io-gateway-url') || 'http://localhost:4000');
-    }
+    const autoDetectGatewayUrl = async () => {
+      try {
+        const response = await fetch('/api/gateway-url', { credentials: 'include' });
+        if (response.ok) {
+          const data = await response.json();
+          setGatewayUrl(data.gatewayUrl);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('ar-io-gateway-url', data.gatewayUrl);
+          }
+        }
+      } catch (error) {
+        console.error('Error auto-detecting Gateway URL:', error);
+        if (typeof window !== 'undefined') {
+          const savedUrl = localStorage.getItem('ar-io-gateway-url') || 'http://localhost:4000';
+          setGatewayUrl(savedUrl);
+        }
+      }
+    };
 
-    // Fetch ADMIN_API_KEY from server
     const fetchAdminApiKey = async () => {
       try {
         const response = await fetch('/api/admin-api-key', { credentials: 'include' });
         if (response.ok) {
           const data = await response.json();
           setAdminApiKey(data.adminApiKey);
-        } else {
-          const errorData = await response.json();
-          console.error('Failed to fetch ADMIN_API_KEY:', errorData.error);
-          setSettingsMessage(`Error fetching ADMIN_API_KEY: ${errorData.error}`);
         }
       } catch (error) {
         console.error('Network error fetching ADMIN_API_KEY:', error);
-        setSettingsMessage('Network error fetching ADMIN_API_KEY.');
       }
     };
+
+    autoDetectGatewayUrl();
     fetchAdminApiKey();
   }, []);
 
-  const saveGatewayUrlSetting = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('ar-io-gateway-url', gatewayUrl);
-      setSettingsMessage('Gateway URL saved locally!');
-      setTimeout(() => setSettingsMessage(''), 3000);
-    }
-  };
-
-  const callApi = async (endpoint: string, method: string, body?: any) => {
+  const callApi = async (endpoint: string, body?: any) => {
     if (!gatewayUrl || !adminApiKey) {
-      throw new Error('Gateway URL or ADMIN_API_KEY is missing. Please ensure they are configured.');
+      throw new Error('Gateway URL or ADMIN_API_KEY is missing.');
     }
 
-    const requestBody = {
-      gatewayUrl,
-      adminApiKey,
-      ...body
-    };
-
-    const response = await fetch(`/api/ar-io-admin/${endpoint}`, { credentials: 'include',
-      method: 'POST', // All client-side calls to our Next.js API are POST
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
+    const response = await fetch(`/api/ar-io-admin/${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ gatewayUrl, adminApiKey, ...body })
     });
 
     if (!response.ok) {
@@ -97,256 +87,391 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
     return response.json();
   };
 
-  const handleDebug = async () => {
-    setDebugLoading(true);
-    setDebugError('');
-    setDebugResponse('');
+  const handleApiCall = async (endpoint: string, stateKey: string, body?: any) => {
+    setStates(prev => ({ 
+      ...prev, 
+      [stateKey]: { ...prev[stateKey], loading: true, error: '', response: '' }
+    }));
+
     try {
-      const data = await callApi('debug', 'GET'); // Actual method to AR.IO Gateway is GET
-      setDebugResponse(JSON.stringify(data, null, 2));
-    } catch (err: any) {
-      setDebugError(err.message);
-    } finally {
-      setDebugLoading(false);
+      const data = await callApi(endpoint, body);
+      setStates(prev => ({
+        ...prev,
+        [stateKey]: { ...prev[stateKey], loading: false, response: JSON.stringify(data, null, 2) }
+      }));
+    } catch (error: any) {
+      setStates(prev => ({
+        ...prev,
+        [stateKey]: { ...prev[stateKey], loading: false, error: error.message }
+      }));
     }
   };
 
-  const handleQueueTx = async () => {
-    setQueueTxLoading(true);
-    setQueueTxError('');
-    setQueueTxResponse('');
-    try {
-      const data = await callApi('queue-tx', 'POST', { id: queueTxId });
-      setQueueTxResponse(JSON.stringify(data, null, 2));
-      // setQueueTxId(''); // Keep for easy re-testing
-    } catch (err: any) {
-      setQueueTxError(err.message);
-    } finally {
-      setQueueTxLoading(false);
-    }
+  const updateStateField = (stateKey: string, field: string, value: string) => {
+    setStates(prev => ({
+      ...prev,
+      [stateKey]: { ...prev[stateKey], [field]: value }
+    }));
   };
 
-  const handleBlockData = async () => {
-    setBlockDataLoading(true);
-    setBlockDataError('');
-    setBlockDataResponse('');
-    try {
-      const data = await callApi('block-data', 'PUT', { // Actual method to AR.IO Gateway is PUT
-        id: blockDataId,
-        notes: blockDataNotes,
-        source: blockDataSource,
-      });
-      setBlockDataResponse(JSON.stringify(data, null, 2));
-      // setBlockDataId(''); // Keep for easy re-testing
-      // setBlockDataNotes('');
-      // setBlockDataSource('');
-    } catch (err: any) {
-      setBlockDataError(err.message);
-    } finally {
-      setBlockDataLoading(false);
-    }
+  const renderCard = (
+    icon: any,
+    title: string,
+    description: string,
+    stateKey: string,
+    buttonText: string,
+    buttonAction: () => void,
+    inputs?: any[],
+    requiredFields?: string[]
+  ) => {
+    // Validate required field completion
+    const hasRequiredFields = !requiredFields || requiredFields.every(field => {
+      const fieldValue = states[stateKey][field];
+      return fieldValue && fieldValue.toString().trim() !== '';
+    });
+    
+    return (
+      <Card className="dashboard-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {icon}
+            {title}
+          </CardTitle>
+          <CardDescription className="text-gray-300">
+            {description}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {inputs?.map((input, idx) => (
+            <div key={idx} className="space-y-2">
+              <Label htmlFor={input.id} className="text-white">
+                {input.label}
+                {input.required && <span className="text-red-400 ml-1">*</span>}
+              </Label>
+              {input.type === 'textarea' ? (
+                <Textarea
+                  id={input.id}
+                  value={input.value}
+                  onChange={input.onChange}
+                  placeholder={input.placeholder}
+                  className={`min-h-[120px] font-mono text-sm bg-gray-900 border-gray-700 text-white placeholder:text-gray-400 ${
+                    input.required && (!input.value || input.value.trim() === '') 
+                      ? 'border-red-500 focus:border-red-400' 
+                      : ''
+                  }`}
+                />
+              ) : (
+                <Input
+                  id={input.id}
+                  type="text"
+                  value={input.value}
+                  onChange={input.onChange}
+                  placeholder={input.placeholder}
+                  className={`bg-gray-900 border-gray-700 text-white placeholder:text-gray-400 ${
+                    input.required && (!input.value || input.value.trim() === '') 
+                      ? 'border-red-500 focus:border-red-400' 
+                      : ''
+                  }`}
+                />
+              )}
+            </div>
+          ))}
+          <Button 
+            onClick={buttonAction}
+            disabled={
+              states[stateKey].loading || 
+              !gatewayUrl || 
+              !adminApiKey ||
+              !hasRequiredFields
+            }
+          >
+            {icon}
+            {states[stateKey].loading ? 'Processing...' : buttonText}
+          </Button>
+        {states[stateKey].error && (
+          <Alert variant="destructive">
+            <AlertDescription>{states[stateKey].error}</AlertDescription>
+          </Alert>
+        )}
+        {states[stateKey].response && (
+          <Textarea
+            value={states[stateKey].response}
+            readOnly
+            className="min-h-[150px] font-mono text-sm bg-gray-900 border-gray-700 text-white"
+          />
+        )}
+      </CardContent>
+    </Card>
+  );
   };
-
-  const getAdminEndpointUrl = (serviceName: string) => {
-    // This is a placeholder for how you might determine the admin endpoint.
-    // In a real application, this might come from a configuration file,
-    // a discovery service, or be hardcoded for specific services.
-    switch (serviceName) {
-      case 'gateway':
-        return `${gatewayUrl}/ar-io/admin`; // Example for Gateway
-      case 'bundler':
-        return `${gatewayUrl}/ar-io/admin`; // Example for Bundler (assuming it also has admin endpoints)
-      case 'grafana':
-        return 'http://localhost:3000'; // Example for Grafana
-      case 'clickhouse':
-        return 'http://localhost:8123'; // Example for Clickhouse HTTP interface
-      default:
-        return null;
-    }
-  };
-
-  const endpointUrl = getAdminEndpointUrl(service);
 
   return (
     <div className="space-y-6">
-      <Card className="dashboard-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Server className="h-4 w-4" />Gateway Admin API Settings</CardTitle>
-          <CardDescription className="text-gray-300">
-            Configure the base URL for your AR.IO Gateway. Your ADMIN_API_KEY is read from the server.
-            The Gateway URL setting is saved locally in your browser.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="gateway-url" className="text-white">AR.IO Gateway Base URL</Label>
-            <Input
-              id="gateway-url"
-              type="url"
-              value={gatewayUrl}
-              onChange={(e) => setGatewayUrl(e.target.value)}
-              placeholder="e.g., http://localhost:4000"
-              className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-400"
-            />
-          </div>
-          <Button onClick={saveGatewayUrlSetting} className="bg-white text-black hover:bg-gray-200">
-            <Save className="h-4 w-4 mr-2" />
-            Save Gateway URL
-          </Button>
-          {settingsMessage && (
-            <Alert className="mt-2">
-              <AlertDescription>{settingsMessage}</AlertDescription>
-            </Alert>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="admin-api-key-display" className="text-white">ADMIN_API_KEY (from server)</Label>
-            <Input
-              id="admin-api-key-display"
-              type="password"
-              value={adminApiKey ? '********' : 'Loading...'}
-              readOnly
-              className="bg-gray-900 border-gray-700 text-white"
-            />
-            {!adminApiKey && <p className="text-sm text-red-400">ADMIN_API_KEY not loaded. Ensure it's set in your server's .env.</p>}
-          </div>
-        </CardContent>
-      </Card>
+      {renderCard(
+        <Bug className="h-5 w-5 text-purple-600" />,
+        "Debug Endpoint",
+        "Get a comprehensive view of the current state of your Gateway.",
+        "debug",
+        "Fetch Debug Info",
+        () => handleApiCall('debug', 'debug')
+      )}
 
+      {renderCard(
+        <Send className="h-5 w-5 text-purple-600" />,
+        "Queue Transaction",
+        "Prioritize processing of a specific transaction or bundle.",
+        "queueTx",
+        "Queue Transaction",
+        () => handleApiCall('queue-tx', 'queueTx', { id: states.queueTx.id }),
+        [{
+          id: 'queue-tx-id',
+          label: 'Transaction/Bundle ID',
+          value: states.queueTx.id,
+          onChange: (e) => updateStateField('queueTx', 'id', e.target.value),
+          placeholder: 'Enter transaction or bundle ID',
+          required: true
+        }],
+        ['id']
+      )}
 
+      {renderCard(
+        <Package className="h-5 w-5 text-green-600" />,
+        "Queue Bundle",
+        "Queue a bundle for indexing, bypassing any filter settings by default.",
+        "queueBundle",
+        "Queue Bundle",
+        () => handleApiCall('queue-bundle', 'queueBundle', { id: states.queueBundle.id }),
+        [{
+          id: 'queue-bundle-id',
+          label: 'Bundle ID',
+          value: states.queueBundle.id,
+          onChange: (e) => updateStateField('queueBundle', 'id', e.target.value),
+          placeholder: 'Enter bundle ID',
+          required: true
+        }],
+        ['id']
+      )}
 
-      <Card className="dashboard-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bug className="h-5 w-5 text-purple-600" />
-            Debug Endpoint
-          </CardTitle>
-          <CardDescription className="text-gray-300">
-            Get a comprehensive view of the current state of your Gateway.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button onClick={handleDebug} disabled={debugLoading || !gatewayUrl || !adminApiKey}>
-            <Bug className="h-4 w-4 mr-2" />
-            {debugLoading ? 'Fetching...' : 'Fetch Debug Info'}
-          </Button>
-          {debugError && (
-            <Alert variant="destructive">
-              <AlertDescription>{debugError}</AlertDescription>
-            </Alert>
-          )}
-          {debugResponse && (
-            <Textarea
-              value={debugResponse}
-              readOnly
-              className="min-h-[300px] font-mono text-sm bg-gray-900 border-gray-700 text-white"
-            />
-          )}
-        </CardContent>
-      </Card>
+      {renderCard(
+        <Database className="h-5 w-5 text-blue-600" />,
+        "Queue Data Item",
+        "Queue data items for indexing using JSON array of data item headers.",
+        "queueDataItem",
+        "Queue Data Items",
+        () => {
+          try {
+            const dataItems = JSON.parse(states.queueDataItem.dataItemsJson);
+            return handleApiCall('queue-data-item', 'queueDataItem', { dataItems });
+          } catch (error) {
+            setStates(prev => ({
+              ...prev,
+              queueDataItem: { ...prev.queueDataItem, error: 'Invalid JSON format' }
+            }));
+          }
+        },
+        [{
+          id: 'queue-data-items-json',
+          label: 'Data Items JSON Array',
+          value: states.queueDataItem.dataItemsJson,
+          onChange: (e) => updateStateField('queueDataItem', 'dataItemsJson', e.target.value),
+          placeholder: '[{"id": "abc123", "data_size": 1024, "owner": "owner_address", "owner_address": "address", "signature": "signature", "tags": [], "content_type": "text/plain", "target": "", "anchor": ""}]',
+          required: true,
+          type: 'textarea'
+        }],
+        ['dataItemsJson']
+      )}
 
-      <Card className="dashboard-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Send className="h-5 w-5 text-purple-600" />
-            Queue Transaction
-          </CardTitle>
-          <CardDescription className="text-gray-300">
-            Prioritize processing of a specific transaction or bundle.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="queue-tx-id" className="text-white">Transaction/Bundle ID</Label>
-            <Input
-              id="queue-tx-id"
-              type="text"
-              value={queueTxId}
-              onChange={(e) => setQueueTxId(e.target.value)}
-              placeholder="Enter transaction or bundle ID"
-              className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-400"
-            />
-          </div>
-          <Button onClick={handleQueueTx} disabled={queueTxLoading || !queueTxId || !gatewayUrl || !adminApiKey}>
-            <Send className="h-4 w-4 mr-2" />
-            {queueTxLoading ? 'Queuing...' : 'Queue Transaction'}
-          </Button>
-          {queueTxError && (
-            <Alert variant="destructive">
-              <AlertDescription>{queueTxError}</AlertDescription>
-            </Alert>
-          )}
-          {queueTxResponse && (
-            <Textarea
-              value={queueTxResponse}
-              readOnly
-              className="min-h-[100px] font-mono text-sm bg-gray-900 border-gray-700 text-white"
-            />
-          )}
-        </CardContent>
-      </Card>
+      {renderCard(
+        <FileSearch className="h-5 w-5 text-yellow-600" />,
+        "Bundle Status",
+        "Get bundle processing status.",
+        "bundleStatus",
+        "Get Bundle Status",
+        () => handleApiCall('bundle-status', 'bundleStatus', { id: states.bundleStatus.id }),
+        [{
+          id: 'bundle-status-id',
+          label: 'Bundle ID',
+          value: states.bundleStatus.id,
+          onChange: (e) => updateStateField('bundleStatus', 'id', e.target.value),
+          placeholder: 'Enter bundle ID',
+          required: true
+        }],
+        ['id']
+      )}
 
-      <Card className="dashboard-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Ban className="h-5 w-5 text-purple-600" />
-            Block Data
-          </CardTitle>
-          <CardDescription className="text-gray-300">
-            Tell your Gateway to refuse to serve certain data.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="block-data-id" className="text-white">Transaction ID to Block</Label>
-            <Input
-              id="block-data-id"
-              type="text"
-              value={blockDataId}
-              onChange={(e) => setBlockDataId(e.target.value)}
-              placeholder="Enter transaction ID"
-              className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-400"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="block-data-notes" className="text-white">Notes (Optional)</Label>
-            <Input
-              id="block-data-notes"
-              type="text"
-              value={blockDataNotes}
-              onChange={(e) => setBlockDataNotes(e.target.value)}
-              placeholder="e.g., Example notes"
-              className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-400"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="block-data-source" className="text-white">Source (Optional)</Label>
-            <Input
-              id="block-data-source"
-              type="text"
-              value={blockDataSource}
-              onChange={(e) => setBlockDataSource(e.target.value)}
-              placeholder="e.g., Public block list name"
-              className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-400"
-            />
-          </div>
-          <Button onClick={handleBlockData} disabled={blockDataLoading || !blockDataId || !gatewayUrl || !adminApiKey}>
-            <Ban className="h-4 w-4 mr-2" />
-            {blockDataLoading ? 'Blocking...' : 'Block Data'}
-          </Button>
-          {blockDataError && (
-            <Alert variant="destructive">
-              <AlertDescription>{blockDataError}</AlertDescription>
-            </Alert>
-          )}
-          {blockDataResponse && (
-            <Textarea
-              value={blockDataResponse}
-              readOnly
-              className="min-h-[100px] font-mono text-sm bg-gray-900 border-gray-700 text-white"
-            />
-          )}
-        </CardContent>
-      </Card>
+      {renderCard(
+        <Ban className="h-5 w-5 text-red-600" />,
+        "Block Data",
+        "Blocks transactions or data-items so your AR.IO Gateway will not serve them.",
+        "blockData",
+        "Block Data",
+        () => handleApiCall('block-data', 'blockData', {
+          id: states.blockData.id,
+          notes: states.blockData.notes,
+          source: states.blockData.source
+        }),
+        [
+          {
+            id: 'block-data-id',
+            label: 'Transaction ID to Block',
+            value: states.blockData.id,
+            onChange: (e) => updateStateField('blockData', 'id', e.target.value),
+            placeholder: 'Enter transaction ID',
+            required: true
+          },
+          {
+            id: 'block-data-notes',
+            label: 'Notes (Optional)',
+            value: states.blockData.notes,
+            onChange: (e) => updateStateField('blockData', 'notes', e.target.value),
+            placeholder: 'e.g., Example notes'
+          },
+          {
+            id: 'block-data-source',
+            label: 'Source (Optional)',
+            value: states.blockData.source,
+            onChange: (e) => updateStateField('blockData', 'source', e.target.value),
+            placeholder: 'e.g., Public block list name'
+          }
+        ],
+        ['id']
+      )}
+
+      {renderCard(
+        <Shield className="h-5 w-5 text-orange-600" />,
+        "Block ARNS Name",
+        "Blocks an ARNS name so your AR.IO Gateway will not serve it.",
+        "blockName",
+        "Block Name",
+        () => handleApiCall('block-name', 'blockName', {
+          name: states.blockName.name,
+          notes: states.blockName.notes,
+          source: states.blockName.source
+        }),
+        [
+          {
+            id: 'block-name',
+            label: 'ARNS Name to Block',
+            value: states.blockName.name,
+            onChange: (e) => updateStateField('blockName', 'name', e.target.value),
+            placeholder: 'Enter ARNS name',
+            required: true
+          },
+          {
+            id: 'block-name-notes',
+            label: 'Notes (Optional)',
+            value: states.blockName.notes,
+            onChange: (e) => updateStateField('blockName', 'notes', e.target.value),
+            placeholder: 'e.g., Reason for blocking'
+          },
+          {
+            id: 'block-name-source',
+            label: 'Source (Optional)',
+            value: states.blockName.source,
+            onChange: (e) => updateStateField('blockName', 'source', e.target.value),
+            placeholder: 'e.g., Block list source'
+          }
+        ],
+        ['name']
+      )}
+
+      {renderCard(
+        <ShieldOff className="h-5 w-5 text-green-600" />,
+        "Unblock ARNS Name",
+        "Unblock an ARNS name.",
+        "unblockName",
+        "Unblock Name",
+        () => handleApiCall('unblock-name', 'unblockName', { name: states.unblockName.name }),
+        [{
+          id: 'unblock-name',
+          label: 'ARNS Name to Unblock',
+          value: states.unblockName.name,
+          onChange: (e) => updateStateField('unblockName', 'name', e.target.value),
+          placeholder: 'Enter ARNS name',
+          required: true
+        }],
+        ['name']
+      )}
+
+      {renderCard(
+        <Download className="h-5 w-5 text-cyan-600" />,
+        "Export Parquet",
+        "Export data to Parquet format with specified parameters.",
+        "exportParquet",
+        "Export to Parquet",
+        () => handleApiCall('export-parquet', 'exportParquet', {
+          outputDir: states.exportParquet.outputDir,
+          startHeight: parseInt(states.exportParquet.startHeight) || 0,
+          endHeight: parseInt(states.exportParquet.endHeight) || 0,
+          maxFileRows: parseInt(states.exportParquet.maxFileRows) || 0
+        }),
+        [
+          {
+            id: 'export-output-dir',
+            label: 'Output Directory',
+            value: states.exportParquet.outputDir,
+            onChange: (e) => updateStateField('exportParquet', 'outputDir', e.target.value),
+            placeholder: 'e.g., /tmp/parquet-export',
+            required: true
+          },
+          {
+            id: 'export-start-height',
+            label: 'Start Height',
+            value: states.exportParquet.startHeight,
+            onChange: (e) => updateStateField('exportParquet', 'startHeight', e.target.value),
+            placeholder: 'e.g., 0',
+            required: true
+          },
+          {
+            id: 'export-end-height',
+            label: 'End Height',
+            value: states.exportParquet.endHeight,
+            onChange: (e) => updateStateField('exportParquet', 'endHeight', e.target.value),
+            placeholder: 'e.g., 1000',
+            required: true
+          },
+          {
+            id: 'export-max-file-rows',
+            label: 'Max File Rows',
+            value: states.exportParquet.maxFileRows,
+            onChange: (e) => updateStateField('exportParquet', 'maxFileRows', e.target.value),
+            placeholder: 'e.g., 10000',
+            required: true
+          }
+        ],
+        ['outputDir', 'startHeight', 'endHeight', 'maxFileRows']
+      )}
+
+      {renderCard(
+        <FileSearch className="h-5 w-5 text-cyan-600" />,
+        "Export Parquet Status",
+        "Get Parquet export status.",
+        "exportStatus",
+        "Get Export Status",
+        () => handleApiCall('export-parquet-status', 'exportStatus')
+      )}
+
+      {renderCard(
+        <Trash2 className="h-5 w-5 text-red-600" />,
+        "Prune Stable Data Items",
+        "Prune stable data items indexed before the specified timestamp.",
+        "pruneData",
+        "Prune Data Items",
+        () => handleApiCall('prune-stable-data-items', 'pruneData', {
+          indexedAtThreshold: parseInt(states.pruneData.indexedAtThreshold) || 0
+        }),
+        [
+          {
+            id: 'prune-indexed-threshold',
+            label: 'Indexed At Threshold (Unix Timestamp)',
+            value: states.pruneData.indexedAtThreshold,
+            onChange: (e) => updateStateField('pruneData', 'indexedAtThreshold', e.target.value),
+            placeholder: 'e.g., 1677721600 (March 1, 2023)',
+            required: true
+          }
+        ],
+        ['indexedAtThreshold']
+      )}
     </div>
   )
 }

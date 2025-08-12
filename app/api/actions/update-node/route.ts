@@ -30,7 +30,7 @@ export async function POST() {
     
     const updateSteps = []
     
-    // Step 1: Pull latest images
+    // Pull latest Docker images
     console.log('Step 1: Pulling latest Docker images...')
     updateSteps.push('Pulling latest images')
     const pullCommand = `cd "${arIoNodePath}" && docker compose -f docker-compose.yaml -p ${projectName} pull`
@@ -38,7 +38,7 @@ export async function POST() {
     console.log('Pull output:', pullOutput)
     if (pullError) console.log('Pull warnings:', pullError)
     
-    // Check if any images were updated
+    // Verify if images were actually updated
     const imageUpdateCheck = pullOutput.includes('Downloaded') || pullOutput.includes('Pulled')
     if (!imageUpdateCheck && pullOutput.includes('up to date')) {
       return NextResponse.json({ 
@@ -52,26 +52,26 @@ export async function POST() {
       })
     }
     
-    // Step 2: Stop services gracefully (but don't remove volumes)
+    // Stop services gracefully
     console.log('Step 2: Stopping services...')
     updateSteps.push('Stopping services')
     const stopCommand = `cd "${arIoNodePath}" && docker compose -f docker-compose.yaml -p ${projectName} stop`
     await execAsync(stopCommand)
     
-    // Step 3: Remove old containers to ensure clean restart
+    // Remove old containers for clean restart
     console.log('Step 3: Removing old containers...')
     updateSteps.push('Removing old containers')
     const rmCommand = `cd "${arIoNodePath}" && docker compose -f docker-compose.yaml -p ${projectName} rm -f`
     await execAsync(rmCommand)
     
-    // Step 4: Start services with updated images
+    // Start services with updated images
     console.log('Step 4: Starting updated services...')
     updateSteps.push('Starting updated services')
     const upCommand = `cd "${arIoNodePath}" && docker compose -f docker-compose.yaml -p ${projectName} up -d`
     const { stdout: upOutput } = await execAsync(upCommand)
     console.log('Start output:', upOutput)
     
-    // Step 5: Verify services are running
+    // Verify all services are running properly
     console.log('Step 5: Verifying services...')
     updateSteps.push('Verifying services')
     const psCommand = `cd "${arIoNodePath}" && docker compose -f docker-compose.yaml -p ${projectName} ps --format json`
@@ -86,15 +86,15 @@ export async function POST() {
       runningServices = services.filter(s => s.State === 'running').length
     } catch (parseError) {
       console.log('Could not parse service status, using fallback')
-      // Fallback: count containers
+      // Fallback container counting
       const { stdout: countOutput } = await execAsync(`docker ps -q --filter "label=com.docker.compose.project=${projectName}" | wc -l`)
       runningServices = parseInt(countOutput.trim()) || 0
-      totalServices = runningServices // Assume all running containers are the total
+      totalServices = runningServices
     }
     
     console.log(`Services status: ${runningServices}/${totalServices} running`)
     
-    const success = runningServices > 0 && runningServices >= totalServices * 0.8 // At least 80% should be running
+    const success = runningServices > 0 && runningServices >= totalServices * 0.8
     
     if (success) {
       return NextResponse.json({ 

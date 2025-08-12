@@ -812,11 +812,11 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
             </Button>
             <Button 
               className="p-4 text-left bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700 hover:border-white h-auto flex-col items-start"
-              onClick={() => onSectionChange('service', 'admin')} // Navigate to Admin Dashboard logs
+              onClick={() => handleQuickAction('view-logs')}
               disabled={actionLoading['view-logs']}
             >
               <div className="font-medium text-white">View System Logs</div>
-              <div className="text-sm text-gray-400">Check system-wide logs</div>
+              <div className="text-sm text-gray-400">{actionLoading['view-logs'] ? 'Loading logs...' : 'Check system-wide logs'}</div>
             </Button>
             <Button 
               className="p-4 text-left bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700 hover:border-white h-auto flex-col items-start"

@@ -5,6 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Play, Square, RotateCcw, Power, Clock, Cpu, MemoryStick, Network, Activity, Server, Wallet, Hash, Copy } from 'lucide-react'
+import { BundlerServiceInfoCard } from '@/components/bundler-service-info-card'
+import { AOComputeInfoCard } from '@/components/ao-compute-info-card'
+import { ObserverInfoCard } from '@/components/observer-info-card'
 
 interface DockerInfo {
   status: string
@@ -45,13 +48,13 @@ export function OverviewTab({ service }: OverviewTabProps) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch both info and metrics in parallel
+        // Fetch container info and metrics in parallel
         const fetchPromises = [
           fetch(`/api/docker/${service}/info`),
           fetch(`/api/docker/${service}/metrics`)
         ]
         
-        // Add gateway info fetch only for gateway service
+        // Fetch additional gateway info for gateway service
         if (service === 'gateway') {
           fetchPromises.push(fetch('/api/ar-io-gateway/info'))
         }
@@ -69,10 +72,10 @@ export function OverviewTab({ service }: OverviewTabProps) {
           setMetrics(metricsData)
         }
         
-        // Handle gateway info response if it exists
+        // Process gateway info response
         if (service === 'gateway' && gatewayInfoResponse && gatewayInfoResponse.ok) {
           const gatewayData = await gatewayInfoResponse.json()
-          // Extract the actual info from the API response wrapper
+          // Extract gateway info from API response
           setGatewayInfo(gatewayData.info || gatewayData)
         }
       } catch (error) {
@@ -132,7 +135,6 @@ export function OverviewTab({ service }: OverviewTabProps) {
   return (
     <div className="space-y-6">
       
-      {/* Gateway Information - only for gateway service - TOP PRIORITY */}
       {service === 'gateway' && gatewayInfo && (
         <Card className="dashboard-card">
           <CardHeader>
@@ -143,7 +145,6 @@ export function OverviewTab({ service }: OverviewTabProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {/* Wallet Address */}
               {gatewayInfo.wallet && (
                 <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-3">
@@ -170,7 +171,6 @@ export function OverviewTab({ service }: OverviewTabProps) {
                 </div>
               )}
               
-              {/* Process ID */}
               {gatewayInfo.processId && (
                 <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-3">
@@ -197,7 +197,6 @@ export function OverviewTab({ service }: OverviewTabProps) {
                 </div>
               )}
               
-              {/* ANS-104 Filter Configurations */}
               {(gatewayInfo.ans104UnbundleFilter || gatewayInfo.ans104IndexFilter) && (
                 <div className="p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-3 mb-3">
@@ -229,7 +228,6 @@ export function OverviewTab({ service }: OverviewTabProps) {
                 </div>
               )}
               
-              {/* Supported Manifest Versions */}
               {gatewayInfo.supportedManifestVersions && gatewayInfo.supportedManifestVersions.length > 0 && (
                 <div className="p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-3 mb-3">
@@ -269,6 +267,21 @@ export function OverviewTab({ service }: OverviewTabProps) {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Bundler Service Information - only for bundler service */}
+      {service === 'bundler' && (
+        <BundlerServiceInfoCard />
+      )}
+
+      {/* AO Compute Unit Information - only for ao-cu service */}
+      {service === 'ao-cu' && (
+        <AOComputeInfoCard />
+      )}
+
+      {/* Observer Information - only for observer service */}
+      {service === 'observer' && (
+        <ObserverInfoCard />
       )}
 
       {/* Status Cards */}

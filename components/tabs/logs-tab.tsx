@@ -20,27 +20,35 @@ interface LogsTabProps {
 
 export function LogsTab({ service }: LogsTabProps) {
   const [logs, setLogs] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [initialLoading, setInitialLoading] = useState(true)
   const [exportingAll, setExportingAll] = useState(false)
   const [filterKeyword, setFilterKeyword] = useState('')
-  const [logLevel, setLogLevel] = useState('all') // New state for log level filter
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [logLevel, setLogLevel] = useState('all')
+  const [lastLogTimestamp, setLastLogTimestamp] = useState<string | null>(null)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
 
-  const fetchLogs = async () => {
-    setLoading(true);
+  // Fetch initial logs (with loading spinner)
+  const fetchInitialLogs = async () => {
+    setInitialLoading(true);
     try {
       const url = new URL(`/api/docker/${service}/logs`, window.location.origin);
       if (filterKeyword) {
         url.searchParams.append('keyword', filterKeyword);
       }
       if (logLevel !== 'all') {
-        url.searchParams.append('level', logLevel); // Send log level as query param
+        url.searchParams.append('level', logLevel);
       }
       const response = await fetch(url.toString());
       if (response.ok) {
         const data = await response.text();
         setLogs(data);
+        // Extract timestamp from last log line for tailing
+        const lines = data.trim().split('\n');
+        if (lines.length > 0 && lines[lines.length - 1]) {
+          setLastLogTimestamp(new Date().toISOString());
+        }
       } else {
         setLogs('Failed to fetch logs.');
       }
@@ -48,14 +56,96 @@ export function LogsTab({ service }: LogsTabProps) {
       console.error('Failed to fetch logs:', error);
       setLogs('Error fetching logs.');
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
+    }
+  };
+
+  // Tail new logs (without loading spinner)
+  const tailNewLogs = async () => {
+    try {
+      const url = new URL(`/api/docker/${service}/logs`, window.location.origin);
+      url.searchParams.append('tail', 'true'); // Indicate we want only new logs
+      if (lastLogTimestamp) {
+        url.searchParams.append('since', lastLogTimestamp);
+      }
+      if (filterKeyword) {
+        url.searchParams.append('keyword', filterKeyword);
+      }
+      if (logLevel !== 'all') {
+        url.searchParams.append('level', logLevel);
+      }
+      
+      const response = await fetch(url.toString());
+      if (response.ok) {
+        const newLogs = await response.text();
+        if (newLogs && newLogs.trim()) {
+          setLogs(prevLogs => {
+            const combined = prevLogs + '\n' + newLogs;
+            // Keep only last 200 lines to prevent memory issues
+            const lines = combined.split('\n');
+            if (lines.length > 200) {
+              return lines.slice(-200).join('\n');
+            }
+            return combined;
+          });
+          setLastLogTimestamp(new Date().toISOString());
+        }
+      }
+    } catch (error) {
+      console.error('Failed to tail logs:', error);
+    }
+  };
+
+  // Manual refresh (with loading spinner)
+  const fetchFreshLogs = async () => {
+    setInitialLoading(true);
+    try {
+      const url = new URL(`/api/docker/${service}/logs`, window.location.origin);
+      if (filterKeyword) {
+        url.searchParams.append('keyword', filterKeyword);
+      }
+      if (logLevel !== 'all') {
+        url.searchParams.append('level', logLevel);
+      }
+      const response = await fetch(url.toString());
+      if (response.ok) {
+        const data = await response.text();
+        setLogs(data);
+        setLastLogTimestamp(new Date().toISOString());
+      } else {
+        setLogs('Failed to fetch logs.');
+      }
+    } catch (error) {
+      console.error('Failed to fetch logs:', error);
+      setLogs('Error fetching logs.');
+    } finally {
+      setInitialLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchLogs();
-    const interval = setInterval(fetchLogs, 5000);
-    return () => clearInterval(interval);
+    // Clean up previous polling
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    
+    // Fetch initial logs
+    fetchInitialLogs();
+    
+    // Set up tailing interval (every 5 seconds, but no loading spinner)
+    const interval = setInterval(() => {
+      if (!abortControllerRef.current?.signal.aborted) {
+        tailNewLogs();
+      }
+    }, 5000);
+    
+    return () => {
+      clearInterval(interval);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [service, filterKeyword, logLevel]); // Re-fetch logs when service, keyword, or log level changes
 
   useEffect(() => {
@@ -65,7 +155,7 @@ export function LogsTab({ service }: LogsTabProps) {
   }, [logs]);
 
   const handleRefresh = async () => {
-    await fetchLogs();
+    await fetchFreshLogs();
   };
 
   const handleDownload = () => {
@@ -141,10 +231,15 @@ export function LogsTab({ service }: LogsTabProps) {
             </Select>
           </div>
           <div className="flex gap-2 flex-shrink-0">
+            <Button onClick={handleRefresh} variant="outline" size="sm" disabled={initialLoading}>
+              <RefreshCw className={`h-4 w-4 mr-1 sm:mr-2 ${initialLoading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">{initialLoading ? 'Loading...' : 'Refresh'}</span>
+              <span className="sm:hidden">{initialLoading ? '...' : 'R'}</span>
+            </Button>
             <Button onClick={handleDownload} variant="outline" size="sm">
               <Download className="h-4 w-4 mr-1 sm:mr-2" />
               <span className="hidden sm:inline">Recent</span>
-              <span className="sm:hidden">R</span>
+              <span className="sm:hidden">D</span>
             </Button>
             <Button 
               onClick={handleExportAllLogs} 
@@ -167,7 +262,7 @@ export function LogsTab({ service }: LogsTabProps) {
             Container Logs - {service}
           </div>
           <pre className="text-sm font-mono whitespace-pre-wrap text-white p-4 leading-relaxed">
-            {loading ? (
+            {initialLoading ? (
               <div className="flex items-center justify-center py-8 text-gray-400">
                 <div className="animate-spin w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full mr-2"></div>
                 Loading logs...

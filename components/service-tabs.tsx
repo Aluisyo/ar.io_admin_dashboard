@@ -9,10 +9,24 @@ import { ConfigurationTab } from '@/components/tabs/configuration-tab'
 import { LogsTab } from '@/components/tabs/logs-tab'
 import { AdminEndpointTab } from '@/components/tabs/admin-endpoint-tab'
 import { IndexingAndWebhookFiltersTab } from '@/components/tabs/indexing-and-webhook-filters-tab'
-import { DatabaseQueryTab } from '@/components/tabs/database-query-tab' // New import
-import { Activity, BarChart3, Settings, FileText, Server, Globe, Filter, LayoutDashboard, Database, Play, Square, RotateCcw, Power } from 'lucide-react'
-import { Button } from '@/components/ui/button' // Added Database icon
-import { useToast } from '@/components/ui/use-toast' // Toast hook
+import { BundlerFiltersTab } from '@/components/tabs/bundler-filters-tab'
+import { DatabaseQueryTab } from '@/components/tabs/database-query-tab'
+import { Activity } from 'lucide-react'
+import { BarChart3 } from 'lucide-react'
+import { Settings } from 'lucide-react'
+import { FileText } from 'lucide-react'
+import { Server } from 'lucide-react'
+import { Globe } from 'lucide-react'
+import { Filter } from 'lucide-react'
+import { LayoutDashboard } from 'lucide-react'
+import { Database } from 'lucide-react'
+import { TrendingUp } from 'lucide-react'
+import { Play } from 'lucide-react'
+import { Square } from 'lucide-react'
+import { RotateCcw } from 'lucide-react'
+import { Power } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/use-toast'
 
 interface DockerInfo { status: string }
 
@@ -40,6 +54,11 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
 
   useEffect(() => {
     fetchDockerInfo();
+  }, [service]);
+
+  // Reset to overview tab when switching services
+  useEffect(() => {
+    setActiveTab('overview');
   }, [service]);
 
   const handleAction = async (action: string) => {
@@ -79,17 +98,27 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
   }
 
   const handleGrafanaDashboardClick = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent the default tab change behavior
+    e.preventDefault();
     const grafanaUrl = process.env.NEXT_PUBLIC_GRAFANA_URL || 'http://localhost:1024';
-    window.open(grafanaUrl, '_blank'); // Open Grafana in a new tab
+    window.open(grafanaUrl, '_blank');
   };
 
-  // Determine the Tailwind grid columns class for TabsList
-  let tabColsClass = 'grid-cols-4'; // Base tabs: overview, metrics, configuration, logs
+  const handlePrometheusDashboardClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const prometheusUrl = process.env.NEXT_PUBLIC_PROMETHEUS_URL || 'http://localhost:9090';
+    window.open(prometheusUrl, '_blank');
+  };
+
+  // Calculate grid columns based on service-specific tabs
+  let tabColsClass = 'grid-cols-4';
   if (service === 'gateway') {
-    tabColsClass = 'grid-cols-7'; // Gateway: add admin endpoint, filters, database query
-  } else if (service === 'grafana' || service === 'clickhouse') {
-    tabColsClass = 'grid-cols-5'; // Grafana or Clickhouse: one extra tab
+    tabColsClass = 'grid-cols-7';
+  } else if (service === 'bundler') {
+    tabColsClass = 'grid-cols-5';
+  } else if (service === 'grafana') {
+    tabColsClass = 'grid-cols-6';
+  } else if (service === 'clickhouse') {
+    tabColsClass = 'grid-cols-5';
   }
 
   return (
@@ -143,8 +172,8 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
           </TabsTrigger>
           {service === 'gateway' && (
             <>
-              <TabsTrigger value="admin-endpoint" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black">
-                <Server className="h-4 w-4" />
+              <TabsTrigger value="admin-endpoint" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black text-gray-300">
+                <Server className="h-4 w-4 text-gray-300 data-[state=active]:text-black flex-shrink-0" style={{ display: 'inline-block', minWidth: '1rem', minHeight: '1rem' }} />
                 Admin Endpoint
               </TabsTrigger>
               <TabsTrigger value="index-filters" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black">
@@ -154,10 +183,16 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
             </>
           )}
 
-          {/* New Grafana Dashboard tab, only for grafana service */}
+          {service === 'bundler' && (
+            <TabsTrigger value="bundler-filters" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black">
+              <Filter className="h-4 w-4" />
+              Filters
+            </TabsTrigger>
+          )}
+
           {service === 'grafana' && (
             <TabsTrigger
-              value="grafana-dashboard" // Unique value for this tab
+              value="grafana-dashboard"
               onClick={handleGrafanaDashboardClick}
               className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black"
             >
@@ -166,13 +201,23 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
             </TabsTrigger>
           )}
 
-          {/* New Database Query tab, only for gateway and clickhouse services */}
+          {service === 'grafana' && (
+            <TabsTrigger
+              value="prometheus-dashboard"
+              onClick={handlePrometheusDashboardClick}
+              className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black"
+            >
+              <TrendingUp className="h-4 w-4" />
+              Prometheus
+            </TabsTrigger>
+          )}
+
           {(service === 'gateway' || service === 'clickhouse') && (
             <TabsTrigger
               value="database-query"
               className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black"
             >
-              <Database className="h-4 w-4" />
+              <Database className="h-4 w-4 text-gray-300 data-[state=active]:text-black flex-shrink-0" style={{ display: 'inline-block', minWidth: '1rem', minHeight: '1rem' }} />
               Database Query
             </TabsTrigger>
           )}
@@ -206,7 +251,12 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
           </>
         )}
 
-        {/* Content for the new Database Query tab */}
+        {service === 'bundler' && (
+          <TabsContent value="bundler-filters" className="space-y-4">
+            <BundlerFiltersTab service={service} />
+          </TabsContent>
+        )}
+
         {(service === 'gateway' || service === 'clickhouse') && (
           <TabsContent value="database-query" className="space-y-4">
             <DatabaseQueryTab service={service} />

@@ -1,6 +1,6 @@
 # AR.IO Admin Dashboard
 
-AR.IO Gateway Admin Dashboard provides a web UI to monitor, control, and inspect your AR.IO Gateway and related services.
+Professional web-based dashboard for monitoring, controlling, and managing AR.IO Gateway infrastructure and associated services.
 
 ## Features
 
