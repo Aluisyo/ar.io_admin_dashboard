@@ -132,7 +132,7 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
         </div>
         <div className="flex gap-2 flex-wrap">
            {dockerInfo?.status === 'stopped' && (
-             <Button onClick={() => handleAction('start')} variant="default" className="bg-green-600 hover:bg-green-700" disabled={loadingAction === 'start'}>
+             <Button onClick={() => handleAction('start')} variant="default" className="bg-white text-black hover:bg-gray-200" disabled={loadingAction === 'start'}>
                <Play className="h-4 w-4 mr-2" />
                {loadingAction === 'start' ? 'Starting...' : 'Start'}
              </Button>

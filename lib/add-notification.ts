@@ -23,7 +23,11 @@ export async function addNotification(
     }
 
     const result = await response.json();
-    console.log('Notification added:', result.notification);
+    if (result.notification) {
+      console.log('Notification added:', result.notification);
+    } else {
+      console.log('Duplicate notification prevented:', message);
+    }
     return true;
   } catch (error) {
     console.error('Error adding notification:', error);
@@ -45,9 +49,41 @@ export const notifyRestart = (serviceName?: string) => {
   return addSuccessNotification(message);
 };
 
+export const notifyStopAll = (details?: { successCount: number, failCount: number, totalContainers: number }) => {
+  if (!details) {
+    return addSuccessNotification('All AR.IO services stopped successfully');
+  }
+  
+  const { successCount, failCount } = details;
+  
+  if (failCount === 0) {
+    return addSuccessNotification(`All ${successCount} AR.IO services stopped successfully`);
+  } else if (successCount > 0) {
+    return addWarningNotification(`${successCount} services stopped successfully, ${failCount} failed`);
+  } else {
+    return addErrorNotification(`Failed to stop all ${failCount} services`);
+  }
+};
+
+export const notifyStartAll = (details?: { started: number, failed: number, total: number }) => {
+  if (!details) {
+    return addSuccessNotification('All AR.IO services started successfully');
+  }
+  
+  const { started, failed } = details;
+  
+  if (failed === 0) {
+    return addSuccessNotification(`All ${started} AR.IO services started successfully`);
+  } else if (started > 0) {
+    return addWarningNotification(`${started} services started successfully, ${failed} failed`);
+  } else {
+    return addErrorNotification(`Failed to start all ${failed} services`);
+  }
+};
+
 export const notifyBackup = (details?: { filesBackedUp: number, fileSize: string, backupPath: string }) => {
   const message = details 
-    ? `Configuration backup completed: ${details.filesBackedUp} files backed up (${details.fileSize})`
+    ? `Configuration backup completed: ${details.filesBackedUp} files backed up (${details.fileSize}) - saved to ${details.backupPath}`
     : 'Configuration backup completed successfully';
   return addSuccessNotification(message);
 };
@@ -72,4 +108,42 @@ export const notifyBootLoop = (serviceName: string, restartCount: number) => {
   return addWarningNotification(
     `Service "${serviceName}" appears to be in a boot loop (${restartCount} restarts in the last 5 minutes)`
   );
+};
+
+// Container operation notifications
+export const notifyContainerStart = (serviceName: string) => {
+  return addSuccessNotification(`${serviceName} service started successfully`);
+};
+
+export const notifyContainerStop = (serviceName: string) => {
+  return addInfoNotification(`${serviceName} service stopped successfully`);
+};
+
+export const notifyContainerRestart = (serviceName: string) => {
+  return addSuccessNotification(`${serviceName} service restarted successfully`);
+};
+
+export const notifyContainerError = (serviceName: string, action: string, error: string) => {
+  return addErrorNotification(`Failed to ${action} ${serviceName} service: ${error}`);
+};
+
+// System-wide notifications
+export const notifySystemHealthCheck = (healthyServices: number, totalServices: number) => {
+  if (healthyServices === totalServices) {
+    return addSuccessNotification(`All ${totalServices} services are running healthy`);
+  } else {
+    return addWarningNotification(`${healthyServices}/${totalServices} services are healthy`);
+  }
+};
+
+export const notifyDiskSpaceWarning = (usage: number, path: string) => {
+  return addWarningNotification(`Disk usage is ${usage}% on ${path} - consider freeing up space`);
+};
+
+export const notifyConfigurationChange = (component: string) => {
+  return addInfoNotification(`Configuration updated for ${component}`);
+};
+
+export const notifyServiceUnhealthy = (serviceName: string, reason: string) => {
+  return addWarningNotification(`${serviceName} service health check failed: ${reason}`);
 };

@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Play, AlertTriangle, Database } from 'lucide-react'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
 interface DatabaseQueryTabProps {
@@ -58,16 +59,16 @@ export function DatabaseQueryTab({ service }: DatabaseQueryTabProps) {
   }
 
   return (
-    <Card>
+    <Card className="dashboard-card">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2"><Database className="h-4 w-4 text-green-600" />Database Query</CardTitle>
+        <CardTitle className="flex items-center gap-2"><Database className="h-4 w-4 icon-success" />Database Query</CardTitle>
         <CardDescription className="text-gray-300">
           Execute SQL queries against the {service === 'gateway' ? 'Gateway\'s SQLite' : 'ClickHouse'} database.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Alert variant="destructive" className="bg-red-900/20 border-red-800 text-red-300">
-          <AlertTriangle className="h-4 w-4 text-red-400" />
+        <Alert variant="destructive" className="bg-gray-800 border-gray-600 text-white">
+          <AlertTriangle className="h-4 w-4 icon-error" />
           <AlertDescription>
             <span className="font-bold">Security Warning:</span> Directly executing user-provided SQL queries can lead to SQL injection vulnerabilities. This feature is for administrative use only. In a production environment, ensure proper sanitization or use parameterized queries.
           </AlertDescription>
@@ -77,7 +78,7 @@ export function DatabaseQueryTab({ service }: DatabaseQueryTabProps) {
           <div className="space-y-2">
             <Label htmlFor="db-type" className="text-white">Database Type</Label>
             <Select value={dbType} onValueChange={(value: 'sqlite' | 'clickhouse') => setDbType(value)}>
-              <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
+            <SelectTrigger className="form-input">
                 <SelectValue placeholder="Select database" />
               </SelectTrigger>
               <SelectContent className="bg-gray-900 border-gray-700 text-white">
@@ -99,7 +100,7 @@ export function DatabaseQueryTab({ service }: DatabaseQueryTabProps) {
                 ? 'e.g., SELECT * FROM transactions LIMIT 10;'
                 : 'e.g., SELECT * FROM my_table LIMIT 10;'
             }
-            className="min-h-[150px] font-mono text-sm bg-gray-900 border-gray-700 text-white placeholder:text-gray-400"
+            className="min-h-[150px] font-mono text-sm form-textarea"
           />
         </div>
 

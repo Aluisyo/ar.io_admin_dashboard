@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select' // Import Select components
 import { RefreshCw, Download, Filter, Search, FileText } from 'lucide-react'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 
 interface LogsTabProps {
   service: string
@@ -200,7 +201,7 @@ export function LogsTab({ service }: LogsTabProps) {
   };
 
   return (
-    <Card>
+    <Card className="dashboard-card">
       <CardHeader>
         <CardTitle>Container Logs</CardTitle>
         <CardDescription className="text-gray-300"> {/* Adjusted text color */}
@@ -215,10 +216,10 @@ export function LogsTab({ service }: LogsTabProps) {
               placeholder="Search logs"
               value={filterKeyword}
               onChange={e => setFilterKeyword(e.target.value)}
-              className="bg-gray-900 border-gray-700 text-white placeholder-gray-400 flex-1 min-w-0"
+              className="form-input flex-1 min-w-0"
             />
             <Select value={logLevel} onValueChange={setLogLevel}>
-              <SelectTrigger className="w-full sm:w-48 bg-gray-900 border-gray-700 text-white">
+              <SelectTrigger className="w-full sm:w-48 form-input">
                 <SelectValue placeholder="Filter by Level" />
               </SelectTrigger>
               <SelectContent className="bg-gray-900 border-gray-700 text-white">
@@ -263,9 +264,8 @@ export function LogsTab({ service }: LogsTabProps) {
           </div>
           <pre className="text-sm font-mono whitespace-pre-wrap text-white p-4 leading-relaxed">
             {initialLoading ? (
-              <div className="flex items-center justify-center py-8 text-gray-400">
-                <div className="animate-spin w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full mr-2"></div>
-                Loading logs...
+              <div className="flex items-center justify-center py-8">
+                <LoadingSpinner size="sm" message="Loading logs..." />
               </div>
             ) : (
               logs || (

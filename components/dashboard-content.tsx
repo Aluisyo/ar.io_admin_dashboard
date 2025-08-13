@@ -6,9 +6,10 @@ import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button' // Import Button for quick actions
 import { Cpu, HardDrive, MemoryStick, Activity, Server, Database, TrendingUp, AlertTriangle, BarChart3, Network, Globe, Zap, Layers, GitBranch, Timer, CheckCircle2 } from 'lucide-react'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import dynamic from 'next/dynamic'
 import { Layout, Data } from 'plotly.js';
-import { notifyRestart, notifyBackup, notifyUpdate, notifyError } from '@/lib/add-notification'
+import { notifyRestart, notifyStopAll, notifyStartAll, notifyBackup, notifyUpdate, notifyError } from '@/lib/add-notification'
 
 // Dynamically import Plotly to avoid SSR issues
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false })
@@ -49,6 +50,15 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
   const [prometheusMetrics, setPrometheusMetrics] = useState<PrometheusMetrics | null>(null)
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
   const [actionResults, setActionResults] = useState<Record<string, { success: boolean, message: string }>>({})
+  
+  // Calculate whether we should show "Start All" or "Stop All" based on service states
+  // Exclude the admin dashboard from this calculation since it's always running
+  const nonAdminServices = services.filter(s => s.serviceId !== 'admin')
+  const runningServices = services.filter(s => s.status === 'running').length
+  const runningNonAdminServices = nonAdminServices.filter(s => s.status === 'running').length
+  const stoppedNonAdminServices = nonAdminServices.filter(s => s.status === 'stopped').length
+  const shouldShowStartAll = runningNonAdminServices === 0 && stoppedNonAdminServices > 0
+  
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -137,6 +147,10 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
         // Send notification based on action type
         if (actionType === 'restart-all') {
           await notifyRestart()
+        } else if (actionType === 'stop-all') {
+          await notifyStopAll(data.details || data.message || 'All containers stopped')
+        } else if (actionType === 'start-all') {
+          await notifyStartAll(data)
         } else if (actionType === 'backup-config') {
           await notifyBackup(data.details)
         } else if (actionType === 'update-node') {
@@ -146,12 +160,30 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
         // Set success result with detailed message
         let successMessage = data.message || `${actionType} completed successfully`
         if (data.details && actionType === 'backup-config') {
-          successMessage += ` (${data.details.filesBackedUp} files, ${data.details.fileSize})`
+          successMessage += ` (${data.details.filesBackedUp} files, ${data.details.fileSize}) - saved to ${data.details.backupPath}`
         } else if (data.details && actionType === 'update-node') {
           if (data.details.imagesUpdated === false) {
             successMessage = 'AR.IO Node is already up to date. No updates needed.'
           } else {
             successMessage += ` (${data.details.servicesRunning}/${data.details.totalServices} services)`
+          }
+        } else if (actionType === 'stop-all') {
+          if (data.stopped > 0) {
+            successMessage = `Successfully stopped ${data.stopped} container${data.stopped !== 1 ? 's' : ''}`
+            if (data.failed > 0) {
+              successMessage += ` (${data.failed} failed to stop)`
+            }
+          } else {
+            successMessage = 'No containers were running to stop'
+          }
+        } else if (actionType === 'start-all') {
+          if (data.started > 0) {
+            successMessage = `Successfully started ${data.started} container${data.started !== 1 ? 's' : ''}`
+            if (data.failed > 0) {
+              successMessage += ` (${data.failed} failed to start)`
+            }
+          } else {
+            successMessage = 'No containers were stopped to start'
           }
         }
         
@@ -203,7 +235,6 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
     }
   }
 
-  const runningServices = services.filter(s => s.status === 'running').length
   const totalServices = services.length
 
   return (
@@ -214,7 +245,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-300">System CPU</CardTitle>
             <div className="p-2 bg-gray-800 rounded-lg">
-              <Cpu className="h-4 w-4 text-white" />
+              <Cpu className="h-4 w-4 icon-primary" />
             </div>
           </CardHeader>
           <CardContent>
@@ -230,7 +261,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-300">Memory</CardTitle>
             <div className="p-2 bg-gray-800 rounded-lg">
-              <MemoryStick className="h-4 w-4 text-white" />
+              <MemoryStick className="h-4 w-4 icon-info" />
             </div>
           </CardHeader>
           <CardContent>
@@ -246,7 +277,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-300">Storage</CardTitle>
             <div className="p-2 bg-gray-800 rounded-lg">
-              <HardDrive className="h-4 w-4 text-white" />
+              <HardDrive className="h-4 w-4 icon-warning" />
             </div>
           </CardHeader>
           <CardContent>
@@ -262,7 +293,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-300">Services</CardTitle>
             <div className="p-2 bg-gray-800 rounded-lg">
-              <Server className="h-4 w-4 text-white" />
+              <Server className="h-4 w-4 icon-success" />
             </div>
           </CardHeader>
           <CardContent>
@@ -287,10 +318,10 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
         <Card className="dashboard-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-white">
-              <BarChart3 className="h-5 w-5 text-white" />
+              <BarChart3 className="h-5 w-5 icon-primary" />
               AR.IO Gateway Metrics
               {prometheusMetrics && !prometheusMetrics.available && (
-                <AlertTriangle className="h-4 w-4 text-red-400 ml-2" />
+                <AlertTriangle className="h-4 w-4 icon-error ml-2" />
               )}
             </CardTitle>
             <CardDescription className="text-gray-300">
@@ -311,7 +342,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                       </CardHeader>
                       <CardContent className="flex items-center justify-center h-40">
                         <div className="text-center">
-                          <div className="text-6xl font-bold text-green-400 mb-2">
+                          <div className="text-6xl font-bold text-white mb-2">
                             {prometheusMetrics.metrics.ario.find((m: any) => m.name === 'last_height_imported')?.value.toLocaleString()}
                           </div>
                         </div>
@@ -715,7 +746,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+                  <AlertTriangle className="h-12 w-12 icon-error mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-white mb-2">Prometheus Unavailable</h3>
                   <p className="text-gray-400 mb-2">
                     {prometheusMetrics?.error === 'Network error' 
@@ -739,7 +770,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
         <Card className="dashboard-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-white">
-              <Activity className="h-5 w-5 text-white" />
+              <Activity className="h-5 w-5 icon-info" />
               Container Status
             </CardTitle>
             <CardDescription className="text-gray-300">
@@ -793,7 +824,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
       <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
-            <Database className="h-5 w-5 text-white" />
+            <Database className="h-5 w-5 icon-primary" />
             Quick Actions
           </CardTitle>
           <CardDescription className="text-gray-300">
@@ -801,7 +832,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Button 
               className="p-4 text-left bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700 hover:border-white h-auto flex-col items-start"
               onClick={() => handleQuickAction('restart-all')}
@@ -812,11 +843,17 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
             </Button>
             <Button 
               className="p-4 text-left bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700 hover:border-white h-auto flex-col items-start"
-              onClick={() => handleQuickAction('view-logs')}
-              disabled={actionLoading['view-logs']}
+              onClick={() => handleQuickAction(shouldShowStartAll ? 'start-all' : 'stop-all')}
+              disabled={actionLoading['stop-all'] || actionLoading['start-all']}
             >
-              <div className="font-medium text-white">View System Logs</div>
-              <div className="text-sm text-gray-400">{actionLoading['view-logs'] ? 'Loading logs...' : 'Check system-wide logs'}</div>
+              <div className="font-medium text-white">
+                {shouldShowStartAll ? 'Start All Services' : 'Stop All Services'}
+              </div>
+              <div className="text-sm text-gray-400">
+                {actionLoading['stop-all'] ? 'Stopping...' : 
+                 actionLoading['start-all'] ? 'Starting...' : 
+                 shouldShowStartAll ? 'Start all stopped containers' : 'Stop all running containers'}
+              </div>
             </Button>
             <Button 
               className="p-4 text-left bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700 hover:border-white h-auto flex-col items-start"
@@ -845,14 +882,14 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                 key={action}
                 className={`mt-4 p-3 rounded-lg border flex items-center gap-2 ${
                   result.success 
-                    ? 'bg-green-900/20 border-green-700 text-green-300' 
-                    : 'bg-red-900/20 border-red-700 text-red-300'
+                    ? 'bg-gray-800 border-gray-600 text-white' 
+                    : 'bg-gray-900 border-gray-700 text-gray-300'
                 }`}
               >
                 {result.success ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-400" />
+                  <CheckCircle2 className="h-4 w-4 icon-success" />
                 ) : (
-                  <AlertTriangle className="h-4 w-4 text-red-400" />
+                  <AlertTriangle className="h-4 w-4 icon-error" />
                 )}
                 <span className="text-sm">{result.message}</span>
               </div>

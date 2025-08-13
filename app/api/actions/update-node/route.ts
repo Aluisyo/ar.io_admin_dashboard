@@ -30,17 +30,47 @@ export async function POST() {
     
     const updateSteps = []
     
-    // Pull latest Docker images
+    // Pull latest Docker images with better update detection
     console.log('Step 1: Pulling latest Docker images...')
     updateSteps.push('Pulling latest images')
+    
+    // Get image IDs before pull to compare
+    const imageListCommand = `cd "${arIoNodePath}" && docker compose -f docker-compose.yaml -p ${projectName} images -q`
+    let beforeImages = ''
+    try {
+      const { stdout } = await execAsync(imageListCommand)
+      beforeImages = stdout.trim()
+    } catch (error) {
+      console.log('Could not get image list before pull, proceeding with pull...')
+    }
+    
     const pullCommand = `cd "${arIoNodePath}" && docker compose -f docker-compose.yaml -p ${projectName} pull`
     const { stdout: pullOutput, stderr: pullError } = await execAsync(pullCommand)
     console.log('Pull output:', pullOutput)
     if (pullError) console.log('Pull warnings:', pullError)
     
-    // Verify if images were actually updated
-    const imageUpdateCheck = pullOutput.includes('Downloaded') || pullOutput.includes('Pulled')
-    if (!imageUpdateCheck && pullOutput.includes('up to date')) {
+    // Get image IDs after pull to compare
+    let afterImages = ''
+    let imagesActuallyUpdated = false
+    
+    try {
+      const { stdout } = await execAsync(imageListCommand)
+      afterImages = stdout.trim()
+      // Compare before and after image IDs to detect actual updates
+      imagesActuallyUpdated = beforeImages !== afterImages
+    } catch (error) {
+      // Fallback to checking pull output for actual download indicators
+      imagesActuallyUpdated = pullOutput.includes('Downloaded') || 
+                             pullOutput.includes('Status: Downloaded') ||
+                             pullOutput.includes('Pull complete') ||
+                             (pullOutput.includes('Pulling') && !pullOutput.includes('Already exists'))
+    }
+    
+    console.log('Before images:', beforeImages.substring(0, 100) + '...')
+    console.log('After images:', afterImages.substring(0, 100) + '...')
+    console.log('Images actually updated:', imagesActuallyUpdated)
+    
+    if (!imagesActuallyUpdated) {
       return NextResponse.json({ 
         success: true, 
         message: 'AR.IO Node is already up to date. No updates available.',

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { User } from 'lucide-react'
 import Image from 'next/image'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -101,6 +102,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
               </Alert>
             )}
             <Button type="submit" className="w-full bg-white text-black hover:bg-gray-200" disabled={isLoading}>
+              <User className="h-4 w-4 mr-2" />
               {isLoading ? 'Signing in...' : 'Sign in'}
             </Button>
           </form>

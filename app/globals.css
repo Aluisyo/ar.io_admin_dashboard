@@ -64,23 +64,74 @@
     @apply absolute top-0 left-0 w-full h-1 bg-white;
   }
   
-  .status-indicator {
+  /* Unified icon colors - Black and White Theme */
+  .icon-primary { @apply text-white; }
+  .icon-success { @apply text-white; }
+  .icon-warning { @apply text-white; }
+  .icon-error { @apply text-white; }
+  .icon-info { @apply text-white; }
+  
+  /* Unified status badges */
+  .status-badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
   
+  .status-badge-running {
+    @apply status-badge bg-green-900/20 text-green-300 border border-green-700;
+  }
+  
+  .status-badge-stopped {
+    @apply status-badge bg-gray-800 text-gray-300 border border-gray-600;
+  }
+  
+  .status-badge-error {
+    @apply status-badge bg-red-900/20 text-red-300 border border-red-700;
+  }
+  
+  .status-badge-warning {
+    @apply status-badge bg-yellow-900/20 text-yellow-300 border border-yellow-700;
+  }
+  
+  .status-badge-info {
+    @apply status-badge bg-blue-900/20 text-blue-300 border border-blue-700;
+  }
+  
+  /* Legacy status indicators for backward compatibility */
+  .status-indicator {
+    @apply status-badge;
+  }
+  
   .status-running {
-    @apply bg-gray-800 text-white border border-gray-700;
+    @apply status-badge-running;
   }
   
   .status-stopped {
-    @apply bg-gray-700 text-gray-300 border border-gray-600;
+    @apply status-badge-stopped;
   }
   
   .status-unknown {
-    @apply bg-gray-800 text-gray-300 border border-gray-700;
+    @apply status-badge-error;
   }
   
-  /* Prevent text overflow and ensure proper wrapping */
+  /* Unified form inputs */
+  .form-input {
+    @apply bg-gray-900 border-gray-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-white focus:border-white transition-all;
+  }
+  
+  .form-textarea {
+    @apply form-input min-h-[120px] font-mono text-sm;
+  }
+  
+  .form-select {
+    @apply form-input;
+  }
+  
+  /* Responsive logs container */
+  .logs-container-improved {
+    @apply relative w-full min-h-[300px] max-h-[500px] h-[40vh] sm:h-[50vh] rounded-md border border-gray-700 overflow-auto bg-gray-950;
+  }
+  
+  /* Legacy logs container for backward compatibility */
   .logs-container {
     @apply relative w-full overflow-hidden;
   }
@@ -101,10 +152,42 @@
     .logs-container {
       @apply min-h-[300px] max-h-[400px];
     }
+    
+    .logs-container-improved {
+      @apply min-h-[250px] max-h-[400px] h-[35vh];
+    }
   }
   
   /* Ensure containers don't overflow viewport */
   .main-content {
     @apply w-full max-w-full overflow-x-hidden;
+  }
+  
+  /* Custom scrollbar styling to match dark theme */
+  /* Webkit browsers (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: #1f2937; /* gray-800 */
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #4b5563; /* gray-600 */
+    border-radius: 4px;
+    border: 1px solid #374151; /* gray-700 */
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #6b7280; /* gray-500 */
+  }
+  
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #4b5563 #1f2937; /* thumb track */
   }
 }

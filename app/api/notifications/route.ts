@@ -37,9 +37,35 @@ export async function POST(request: Request) {
       await saveNotificationsToFile(notifications);
       return NextResponse.json({ success: true, message: `Notification ${id} marked as read` });
     } else if (action === 'add') {
+      // Check for duplicate notifications (same message within the last 30 seconds)
+      const currentTime = new Date();
+      const thirtySecondsAgo = new Date(currentTime.getTime() - 30 * 1000);
+      
+      const isDuplicate = notifications.some(n => {
+        const notificationTime = new Date(n.time);
+        return n.message === message && 
+               n.type === type && 
+               notificationTime >= thirtySecondsAgo;
+      });
+      
+      if (isDuplicate) {
+        console.log('Duplicate notification prevented:', message);
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Duplicate notification prevented',
+          notification: null 
+        });
+      }
+      
       const newId = notifications.length > 0 ? Math.max(...notifications.map(n => n.id)) + 1 : 1;
       const newNotification = { id: newId, message, type, time: time || new Date().toLocaleString(), read: false };
       notifications.unshift(newNotification); // Add to the beginning
+      
+      // Limit to keep only the latest 50 notifications to prevent file from growing too large
+      if (notifications.length > 50) {
+        notifications = notifications.slice(0, 50);
+      }
+      
       await saveNotificationsToFile(notifications);
       return NextResponse.json({ success: true, notification: newNotification });
     }

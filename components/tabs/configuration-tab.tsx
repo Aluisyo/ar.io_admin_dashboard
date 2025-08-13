@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Save, RefreshCw, PlusCircle, Trash2, Info } from 'lucide-react'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 
 interface ConfigVar {
   id: number;
@@ -163,11 +164,15 @@ export function ConfigurationTab({ service }: ConfigurationTabProps) {
   };
 
   if (loading) {
-    return <div>Loading configuration...</div>;
+    return (
+      <div className="flex items-center justify-center py-12">
+        <LoadingSpinner size="lg" message="Loading configuration..." />
+      </div>
+    );
   }
 
   return (
-    <Card>
+    <Card className="dashboard-card">
       <CardHeader>
         <CardTitle>Environment Configuration</CardTitle>
         <CardDescription className="text-gray-300">
@@ -197,8 +202,8 @@ export function ConfigurationTab({ service }: ConfigurationTabProps) {
         )}
         
         {service === 'admin' && (
-          <Alert className="border-yellow-600 bg-yellow-950/20">
-            <AlertDescription className="text-yellow-200">
+          <Alert className="border-gray-600 bg-gray-800">
+            <AlertDescription className="text-white">
               <strong>Important:</strong> Changes to the Admin Dashboard configuration require restarting the admin service to take effect. 
               Some changes (like NEXTAUTH_SECRET) may require clearing browser sessions.
             </AlertDescription>
@@ -220,7 +225,7 @@ export function ConfigurationTab({ service }: ConfigurationTabProps) {
                   placeholder="KEY_NAME"
                   value={configVar.key}
                   onChange={(e) => handleVariableChange(configVar.id, 'key', e.target.value)}
-                  className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-400"
+                  className="form-input"
                 />
               </div>
               <div className="flex-1 space-y-1">
@@ -231,12 +236,12 @@ export function ConfigurationTab({ service }: ConfigurationTabProps) {
                     placeholder="value"
                     value={configVar.value}
                     onChange={(e) => handleVariableChange(configVar.id, 'value', e.target.value)}
-                    className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-400"
+                    className="form-input"
                     type={configVar.key.toLowerCase().includes('password') || configVar.key.toLowerCase().includes('secret') ? 'password' : 'text'}
                   />
                   {service === 'admin' && ADMIN_ENV_HINTS[configVar.key] && (
                     <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                      <Info className="h-4 w-4 text-gray-400" title={ADMIN_ENV_HINTS[configVar.key]} />
+                      <Info className="h-4 w-4 icon-info" title={ADMIN_ENV_HINTS[configVar.key]} />
                     </div>
                   )}
                 </div>

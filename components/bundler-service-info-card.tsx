@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Server, Wallet, Globe, HardDrive, CheckCircle, AlertTriangle, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 
 interface BundlerInfo {
   version: string
@@ -77,10 +78,10 @@ export function BundlerServiceInfoCard() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Server className="h-5 w-5" />
+            <Server className="h-5 w-5 icon-info" />
             Bundler Service Info
           </CardTitle>
           <CardDescription>
@@ -88,10 +89,7 @@ export function BundlerServiceInfoCard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            <span className="ml-2 text-gray-400">Loading bundler info...</span>
-          </div>
+          <LoadingSpinner message="Loading bundler info..." />
         </CardContent>
       </Card>
     )
@@ -99,12 +97,12 @@ export function BundlerServiceInfoCard() {
 
   if (error && !bundlerInfo?.data) {
     return (
-      <Card>
+      <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Server className="h-5 w-5" />
+            <Server className="h-5 w-5 icon-info" />
             Bundler Service Info
-            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <AlertTriangle className="h-4 w-4 icon-error" />
           </CardTitle>
           <CardDescription>
             Information from bundler service endpoint
@@ -112,7 +110,7 @@ export function BundlerServiceInfoCard() {
         </CardHeader>
         <CardContent>
           <Alert>
-            <AlertTriangle className="h-4 w-4" />
+            <AlertTriangle className="h-4 w-4 icon-error" />
             <AlertDescription>
               {error}
               {bundlerInfo?.endpoints && (
@@ -133,12 +131,12 @@ export function BundlerServiceInfoCard() {
   }
 
   return (
-    <Card>
+    <Card className="dashboard-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Server className="h-5 w-5" />
+          <Server className="h-5 w-5 icon-info" />
           Bundler Service Info
-          <CheckCircle className="h-4 w-4 text-green-500" />
+          <CheckCircle className="h-4 w-4 icon-success" />
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -158,7 +156,7 @@ export function BundlerServiceInfoCard() {
           {/* Arweave Address */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Wallet className="h-4 w-4 text-orange-400" />
+              <Wallet className="h-4 w-4 icon-primary" />
               <Badge variant="outline" className="text-xs">
                 Arweave Address
               </Badge>
@@ -182,7 +180,7 @@ export function BundlerServiceInfoCard() {
           {/* Gateway */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4 text-blue-400" />
+              <Globe className="h-4 w-4 icon-info" />
               <Badge variant="outline" className="text-xs">
                 Gateway
               </Badge>
@@ -195,7 +193,7 @@ export function BundlerServiceInfoCard() {
           {/* Free Upload Limit */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <HardDrive className="h-4 w-4 text-green-400" />
+              <HardDrive className="h-4 w-4 icon-success" />
               <Badge variant="outline" className="text-xs">
                 Upload Limit
               </Badge>

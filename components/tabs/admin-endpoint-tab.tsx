@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Bug, Send, Ban, Package, FileSearch, Shield, ShieldOff, Database, Download, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -146,7 +147,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
             <div key={idx} className="space-y-2">
               <Label htmlFor={input.id} className="text-white">
                 {input.label}
-                {input.required && <span className="text-red-400 ml-1">*</span>}
+                {input.required && <span className="text-white ml-1">*</span>}
               </Label>
               {input.type === 'textarea' ? (
                 <Textarea
@@ -154,9 +155,9 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
                   value={input.value}
                   onChange={input.onChange}
                   placeholder={input.placeholder}
-                  className={`min-h-[120px] font-mono text-sm bg-gray-900 border-gray-700 text-white placeholder:text-gray-400 ${
+                  className={`form-textarea ${
                     input.required && (!input.value || input.value.trim() === '') 
-                      ? 'border-red-500 focus:border-red-400' 
+                      ? 'border-gray-500 focus:border-gray-400'
                       : ''
                   }`}
                 />
@@ -167,9 +168,9 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
                   value={input.value}
                   onChange={input.onChange}
                   placeholder={input.placeholder}
-                  className={`bg-gray-900 border-gray-700 text-white placeholder:text-gray-400 ${
+                  className={`form-input ${
                     input.required && (!input.value || input.value.trim() === '') 
-                      ? 'border-red-500 focus:border-red-400' 
+                      ? 'border-gray-500 focus:border-gray-400'
                       : ''
                   }`}
                 />
@@ -185,7 +186,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
               !hasRequiredFields
             }
           >
-            {icon}
+            {React.cloneElement(icon, { className: `${icon.props.className || ''} mr-2 text-black` })}
             {states[stateKey].loading ? 'Processing...' : buttonText}
           </Button>
         {states[stateKey].error && (
@@ -208,7 +209,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
   return (
     <div className="space-y-6">
       {renderCard(
-        <Bug className="h-5 w-5 text-purple-600" />,
+        <Bug className="h-5 w-5 icon-info" />,
         "Debug Endpoint",
         "Get a comprehensive view of the current state of your Gateway.",
         "debug",
@@ -217,7 +218,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
       )}
 
       {renderCard(
-        <Send className="h-5 w-5 text-purple-600" />,
+        <Send className="h-5 w-5 icon-primary" />,
         "Queue Transaction",
         "Prioritize processing of a specific transaction or bundle.",
         "queueTx",
@@ -235,7 +236,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
       )}
 
       {renderCard(
-        <Package className="h-5 w-5 text-green-600" />,
+        <Package className="h-5 w-5 icon-success" />,
         "Queue Bundle",
         "Queue a bundle for indexing, bypassing any filter settings by default.",
         "queueBundle",
@@ -253,7 +254,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
       )}
 
       {renderCard(
-        <Database className="h-5 w-5 text-blue-600" />,
+        <Database className="h-5 w-5 icon-info" />,
         "Queue Data Item",
         "Queue data items for indexing using JSON array of data item headers.",
         "queueDataItem",
@@ -282,7 +283,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
       )}
 
       {renderCard(
-        <FileSearch className="h-5 w-5 text-yellow-600" />,
+        <FileSearch className="h-5 w-5 icon-warning" />,
         "Bundle Status",
         "Get bundle processing status.",
         "bundleStatus",
@@ -300,7 +301,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
       )}
 
       {renderCard(
-        <Ban className="h-5 w-5 text-red-600" />,
+        <Ban className="h-5 w-5 icon-error" />,
         "Block Data",
         "Blocks transactions or data-items so your AR.IO Gateway will not serve them.",
         "blockData",
@@ -338,7 +339,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
       )}
 
       {renderCard(
-        <Shield className="h-5 w-5 text-orange-600" />,
+        <Shield className="h-5 w-5 icon-warning" />,
         "Block ARNS Name",
         "Blocks an ARNS name so your AR.IO Gateway will not serve it.",
         "blockName",
@@ -376,7 +377,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
       )}
 
       {renderCard(
-        <ShieldOff className="h-5 w-5 text-green-600" />,
+        <ShieldOff className="h-5 w-5 icon-success" />,
         "Unblock ARNS Name",
         "Unblock an ARNS name.",
         "unblockName",
@@ -394,7 +395,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
       )}
 
       {renderCard(
-        <Download className="h-5 w-5 text-cyan-600" />,
+        <Download className="h-5 w-5 icon-info" />,
         "Export Parquet",
         "Export data to Parquet format with specified parameters.",
         "exportParquet",
@@ -443,7 +444,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
       )}
 
       {renderCard(
-        <FileSearch className="h-5 w-5 text-cyan-600" />,
+        <FileSearch className="h-5 w-5 icon-info" />,
         "Export Parquet Status",
         "Get Parquet export status.",
         "exportStatus",
@@ -452,7 +453,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
       )}
 
       {renderCard(
-        <Trash2 className="h-5 w-5 text-red-600" />,
+        <Trash2 className="h-5 w-5 icon-error" />,
         "Prune Stable Data Items",
         "Prune stable data items indexed before the specified timestamp.",
         "pruneData",

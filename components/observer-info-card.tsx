@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Eye, Wallet, Clock, BarChart3, CheckCircle, AlertTriangle, Copy, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 
 interface ObserverReport {
   formatVersion: number
@@ -101,10 +102,10 @@ export function ObserverInfoCard() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Eye className="h-5 w-5" />
+            <Eye className="h-5 w-5 icon-info" />
             Observer Current Report
           </CardTitle>
           <CardDescription>
@@ -112,10 +113,7 @@ export function ObserverInfoCard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            <span className="ml-2 text-gray-400">Loading Observer report...</span>
-          </div>
+          <LoadingSpinner message="Loading Observer report..." />
         </CardContent>
       </Card>
     )
@@ -123,12 +121,12 @@ export function ObserverInfoCard() {
 
   if (error && !observerReport?.data) {
     return (
-      <Card>
+      <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Eye className="h-5 w-5" />
+            <Eye className="h-5 w-5 icon-info" />
             Observer Current Report
-            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <AlertTriangle className="h-4 w-4 icon-error" />
           </CardTitle>
           <CardDescription>
             Current epoch report from Observer service
@@ -136,7 +134,7 @@ export function ObserverInfoCard() {
         </CardHeader>
         <CardContent>
           <Alert>
-            <AlertTriangle className="h-4 w-4" />
+            <AlertTriangle className="h-4 w-4 icon-error" />
             <AlertDescription>
               {error}
               {observerReport?.endpoints && (
@@ -160,12 +158,12 @@ export function ObserverInfoCard() {
   const epochProgress = getEpochProgress(data.epochStartTimestamp || 0, data.epochEndTimestamp || 0, currentTime)
 
   return (
-    <Card>
+    <Card className="dashboard-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Eye className="h-5 w-5" />
+          <Eye className="h-5 w-5 icon-info" />
           Observer Current Report
-          <CheckCircle className="h-4 w-4 text-green-500" />
+          <CheckCircle className="h-4 w-4 icon-success" />
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -182,7 +180,7 @@ export function ObserverInfoCard() {
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-blue-400" />
+                <BarChart3 className="h-4 w-4 icon-info" />
                 <Badge variant="outline" className="text-xs">
                   Epoch Index
                 </Badge>
@@ -201,7 +199,7 @@ export function ObserverInfoCard() {
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-blue-400" />
+                <Clock className="h-4 w-4 icon-info" />
                 <Badge variant="outline" className="text-xs">
                   Report Generated
                 </Badge>
@@ -215,7 +213,7 @@ export function ObserverInfoCard() {
           {/* Observer Address Row */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Wallet className="h-4 w-4 text-orange-400" />
+              <Wallet className="h-4 w-4 icon-primary" />
               <Badge variant="outline" className="text-xs">
                 Observer Address
               </Badge>
@@ -239,7 +237,7 @@ export function ObserverInfoCard() {
           {/* Epoch Progress Section */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-purple-400" />
+              <Calendar className="h-4 w-4 icon-primary" />
               <Badge variant="outline" className="text-xs">
                 Epoch Progress
               </Badge>
@@ -255,7 +253,7 @@ export function ObserverInfoCard() {
               </div>
               <div className="w-full bg-gray-800 rounded-full h-3">
                 <div 
-                  className="bg-purple-500 h-3 rounded-full transition-all duration-300" 
+                  className="bg-white h-3 rounded-full transition-all duration-300"
                   style={{ width: `${epochProgress}%` }}
                 />
               </div>

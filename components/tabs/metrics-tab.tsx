@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress'
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { Cpu, MemoryStick, HardDrive, Network, TrendingUp, Activity, Server, Database, Globe, Clock, Zap, Layers, Monitor, AlertTriangle } from 'lucide-react'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import dynamic from 'next/dynamic'
 import { Layout, Data } from 'plotly.js'
 
@@ -105,9 +106,9 @@ export function MetricsTab({ service }: MetricsTabProps) {
   }, [service])
 
   const getUsageColor = (value: number) => {
-    if (value > 80) return 'text-red-600'
-    if (value > 60) return 'text-amber-600'
-    return 'text-green-600'
+    if (value > 80) return 'text-red-400'
+    if (value > 60) return 'text-yellow-400'
+    return 'text-green-400'
   }
 
   const getUsageStatus = (value: number) => {
@@ -123,8 +124,8 @@ export function MetricsTab({ service }: MetricsTabProps) {
         <Card className="metric-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-300">CPU Usage</CardTitle> {/* Adjusted text color */}
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Cpu className="h-4 w-4 text-blue-600" />
+            <div className="p-2 bg-gray-800 rounded-lg">
+              <Cpu className="h-4 w-4 text-white" />
             </div>
           </CardHeader>
           <CardContent>
@@ -141,8 +142,8 @@ export function MetricsTab({ service }: MetricsTabProps) {
         <Card className="metric-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-300">Memory Usage</CardTitle> {/* Adjusted text color */}
-            <div className="p-2 bg-green-100 rounded-lg">
-              <MemoryStick className="h-4 w-4 text-green-600" />
+            <div className="p-2 bg-gray-800 rounded-lg">
+              <MemoryStick className="h-4 w-4 text-white" />
             </div>
           </CardHeader>
           <CardContent>
@@ -159,8 +160,8 @@ export function MetricsTab({ service }: MetricsTabProps) {
         <Card className="metric-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-300">Storage Usage</CardTitle> {/* Adjusted text color */}
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <HardDrive className="h-4 w-4 text-purple-600" />
+            <div className="p-2 bg-gray-800 rounded-lg">
+              <HardDrive className="h-4 w-4 text-white" />
             </div>
           </CardHeader>
           <CardContent>
@@ -177,8 +178,8 @@ export function MetricsTab({ service }: MetricsTabProps) {
         <Card className="metric-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-300">Network I/O</CardTitle> {/* Adjusted text color */}
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <Network className="h-4 w-4 text-orange-600" />
+            <div className="p-2 bg-gray-800 rounded-lg">
+              <Network className="h-4 w-4 text-white" />
             </div>
           </CardHeader>
           <CardContent>
@@ -204,7 +205,7 @@ export function MetricsTab({ service }: MetricsTabProps) {
         <>
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-              <Server className="h-5 w-5 text-blue-500" />
+              <Server className="h-5 w-5 icon-info" />
               AR.IO Gateway Metrics
             </h3>
           </div>
@@ -648,7 +649,7 @@ export function MetricsTab({ service }: MetricsTabProps) {
         <Card className="dashboard-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-purple-600" />
+              <TrendingUp className="h-5 w-5 icon-primary" />
               Performance Overview
             </CardTitle>
             <CardDescription className="text-gray-300"> {/* Adjusted text color */}
@@ -659,8 +660,8 @@ export function MetricsTab({ service }: MetricsTabProps) {
             <div className="space-y-4">
               <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded">
-                    <Cpu className="h-4 w-4 text-blue-600" />
+                  <div className="p-2 bg-gray-800 rounded">
+                    <Cpu className="h-4 w-4 text-white" />
                   </div>
                   <div>
                     <p className="font-medium text-white">CPU Cores</p>
@@ -672,8 +673,8 @@ export function MetricsTab({ service }: MetricsTabProps) {
 
               <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded">
-                    <MemoryStick className="h-4 w-4 text-green-600" />
+                  <div className="p-2 bg-gray-800 rounded">
+                    <MemoryStick className="h-4 w-4 text-white" />
                   </div>
                   <div>
                     <p className="font-medium text-white">Memory Limit</p>
@@ -685,8 +686,8 @@ export function MetricsTab({ service }: MetricsTabProps) {
 
               <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded">
-                    <HardDrive className="h-4 w-4 text-purple-600" />
+                  <div className="p-2 bg-gray-800 rounded">
+                    <HardDrive className="h-4 w-4 text-white" />
                   </div>
                   <div>
                     <p className="font-medium text-white">Disk I/O</p>
@@ -702,7 +703,7 @@ export function MetricsTab({ service }: MetricsTabProps) {
         <Card className="dashboard-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-purple-600" />
+              <Activity className="h-5 w-5 icon-primary" />
               Resource Alerts
             </CardTitle>
             <CardDescription className="text-gray-300"> {/* Adjusted text color */}
@@ -712,31 +713,31 @@ export function MetricsTab({ service }: MetricsTabProps) {
           <CardContent>
             <div className="space-y-3">
               {(metrics?.cpu || 0) > 80 && (
-                <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                <div className="flex items-center gap-3 p-3 bg-gray-800 border border-gray-600 rounded-lg">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
                   <div>
-                    <p className="font-medium text-red-900">High CPU Usage</p>
-                    <p className="text-sm text-red-700">CPU usage is above 80%</p>
+                    <p className="font-medium text-white">High CPU Usage</p>
+                    <p className="text-sm text-gray-300">CPU usage is above 80%</p>
                   </div>
                 </div>
               )}
               
               {(metrics?.memory || 0) > 80 && (
-                <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                <div className="flex items-center gap-3 p-3 bg-gray-800 border border-gray-600 rounded-lg">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
                   <div>
-                    <p className="font-medium text-red-900">High Memory Usage</p>
-                    <p className="text-sm text-red-700">Memory usage is above 80%</p>
+                    <p className="font-medium text-white">High Memory Usage</p>
+                    <p className="text-sm text-gray-300">Memory usage is above 80%</p>
                   </div>
                 </div>
               )}
 
               {(metrics?.cpu || 0) <= 80 && (metrics?.memory || 0) <= 80 && (
-                <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <div className="flex items-center gap-3 p-3 bg-gray-800 border border-gray-600 rounded-lg">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
                   <div>
-                    <p className="font-medium text-green-900">System Healthy</p>
-                    <p className="text-sm text-green-700">All metrics within normal range</p>
+                    <p className="font-medium text-white">System Healthy</p>
+                    <p className="text-sm text-gray-300">All metrics within normal range</p>
                   </div>
                 </div>
               )}

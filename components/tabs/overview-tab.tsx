@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Play, Square, RotateCcw, Power, Clock, Cpu, MemoryStick, Network, Activity, Server, Wallet, Hash, Copy } from 'lucide-react'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { BundlerServiceInfoCard } from '@/components/bundler-service-info-card'
 import { AOComputeInfoCard } from '@/components/ao-compute-info-card'
 import { ObserverInfoCard } from '@/components/observer-info-card'
@@ -119,15 +120,8 @@ export function OverviewTab({ service }: OverviewTabProps) {
 
   if (loading) {
     return (
-      <div className="grid gap-6 md:grid-cols-2">
-        {[...Array(4)].map((_, i) => (
-          <Card key={i} className="dashboard-card animate-pulse">
-            <CardContent className="p-6">
-              <div className="h-4 bg-slate-200 rounded w-3/4 mb-4"></div>
-              <div className="h-8 bg-slate-200 rounded w-1/2"></div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="flex items-center justify-center py-12">
+        <LoadingSpinner size="lg" message="Loading service overview..." />
       </div>
     )
   }
@@ -139,7 +133,7 @@ export function OverviewTab({ service }: OverviewTabProps) {
         <Card className="dashboard-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Server className="h-5 w-5 text-blue-500" />
+              <Server className="h-5 w-5 icon-info" />
               AR.IO Gateway Information
             </CardTitle>
           </CardHeader>
@@ -148,8 +142,8 @@ export function OverviewTab({ service }: OverviewTabProps) {
               {gatewayInfo.wallet && (
                 <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-100 rounded">
-                      <Wallet className="h-4 w-4 text-green-600" />
+                    <div className="p-2 bg-gray-800 rounded">
+                      <Wallet className="h-4 w-4 icon-success" />
                     </div>
                     <div>
                       <p className="font-medium text-white">Gateway Wallet Address</p>
@@ -174,8 +168,8 @@ export function OverviewTab({ service }: OverviewTabProps) {
               {gatewayInfo.processId && (
                 <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 rounded">
-                      <Hash className="h-4 w-4 text-purple-600" />
+                    <div className="p-2 bg-gray-800 rounded">
+                      <Hash className="h-4 w-4 icon-primary" />
                     </div>
                     <div>
                       <p className="font-medium text-white">Process ID</p>
@@ -200,8 +194,8 @@ export function OverviewTab({ service }: OverviewTabProps) {
               {(gatewayInfo.ans104UnbundleFilter || gatewayInfo.ans104IndexFilter) && (
                 <div className="p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-yellow-100 rounded">
-                      <Hash className="h-4 w-4 text-yellow-600" />
+                    <div className="p-2 bg-gray-800 rounded">
+                      <Hash className="h-4 w-4 icon-warning" />
                     </div>
                     <div>
                       <p className="font-medium text-white">ANS-104 Filter Configurations</p>
@@ -210,7 +204,7 @@ export function OverviewTab({ service }: OverviewTabProps) {
                   <div className="bg-gray-900 rounded p-3 max-h-48 overflow-auto space-y-3">
                     {gatewayInfo.ans104UnbundleFilter && (
                       <div>
-                        <p className="text-xs font-semibold text-blue-400 mb-1">Unbundle Filter:</p>
+                        <p className="text-xs font-semibold text-white mb-1">Unbundle Filter:</p>
                         <pre className="text-xs text-gray-300">
                           {JSON.stringify(gatewayInfo.ans104UnbundleFilter, null, 2)}
                         </pre>
@@ -218,7 +212,7 @@ export function OverviewTab({ service }: OverviewTabProps) {
                     )}
                     {gatewayInfo.ans104IndexFilter && (
                       <div>
-                        <p className="text-xs font-semibold text-green-400 mb-1">Index Filter:</p>
+                        <p className="text-xs font-semibold text-white mb-1">Index Filter:</p>
                         <pre className="text-xs text-gray-300">
                           {JSON.stringify(gatewayInfo.ans104IndexFilter, null, 2)}
                         </pre>
@@ -231,8 +225,8 @@ export function OverviewTab({ service }: OverviewTabProps) {
               {gatewayInfo.supportedManifestVersions && gatewayInfo.supportedManifestVersions.length > 0 && (
                 <div className="p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-orange-100 rounded">
-                      <Activity className="h-4 w-4 text-orange-600" />
+                    <div className="p-2 bg-gray-800 rounded">
+                      <Activity className="h-4 w-4 icon-warning" />
                     </div>
                     <div>
                       <p className="font-medium text-white">Supported Manifest Versions</p>
@@ -252,8 +246,8 @@ export function OverviewTab({ service }: OverviewTabProps) {
               {gatewayInfo.release && (
                 <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded">
-                      <Network className="h-4 w-4 text-blue-600" />
+                    <div className="p-2 bg-gray-800 rounded">
+                      <Network className="h-4 w-4 icon-info" />
                     </div>
                     <div>
                       <p className="font-medium text-white">Gateway Software Release Version</p>
@@ -290,7 +284,7 @@ export function OverviewTab({ service }: OverviewTabProps) {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-300 flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${
-                dockerInfo?.status === 'running' ? 'bg-green-500' : 'bg-red-500'
+                dockerInfo?.status === 'running' ? 'bg-white' : 'bg-gray-500'
               }`} />
               Container Status
             </CardTitle>
@@ -347,7 +341,7 @@ export function OverviewTab({ service }: OverviewTabProps) {
         <Card className="dashboard-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Network className="h-5 w-5 text-purple-600" />
+              <Network className="h-5 w-5 icon-primary" />
               Port Configuration
             </CardTitle>
             <CardDescription className="text-gray-300">
@@ -376,7 +370,7 @@ export function OverviewTab({ service }: OverviewTabProps) {
         <Card className="dashboard-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Cpu className="h-5 w-5 text-purple-600" />
+              <Cpu className="h-5 w-5 icon-primary" />
               Container Metrics
             </CardTitle>
             <CardDescription className="text-gray-300">
@@ -387,8 +381,8 @@ export function OverviewTab({ service }: OverviewTabProps) {
             <div className="space-y-4">
               <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded">
-                    <Cpu className="h-4 w-4 text-blue-600" />
+                  <div className="p-2 bg-gray-800 rounded">
+                    <Cpu className="h-4 w-4 icon-info" />
                   </div>
                   <div>
                     <p className="font-medium text-white">CPU Usage</p>
@@ -400,8 +394,8 @@ export function OverviewTab({ service }: OverviewTabProps) {
 
               <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded">
-                    <MemoryStick className="h-4 w-4 text-green-600" />
+                  <div className="p-2 bg-gray-800 rounded">
+                    <MemoryStick className="h-4 w-4 icon-success" />
                   </div>
                   <div>
                     <p className="font-medium text-white">Memory Usage</p>
@@ -414,8 +408,8 @@ export function OverviewTab({ service }: OverviewTabProps) {
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="p-1 bg-purple-100 rounded">
-                      <Activity className="h-3 w-3 text-purple-600" />
+                    <div className="p-1 bg-gray-800 rounded">
+                      <Activity className="h-3 w-3 icon-primary" />
                     </div>
                     <span className="text-sm font-medium text-white">Network In</span>
                   </div>
@@ -423,8 +417,8 @@ export function OverviewTab({ service }: OverviewTabProps) {
                 </div>
                 <div className="flex flex-col p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="p-1 bg-orange-100 rounded">
-                      <Activity className="h-3 w-3 text-orange-600" />
+                    <div className="p-1 bg-gray-800 rounded">
+                      <Activity className="h-3 w-3 icon-warning" />
                     </div>
                     <span className="text-sm font-medium text-white">Network Out</span>
                   </div>

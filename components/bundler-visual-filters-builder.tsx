@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Plus, X, Save, RefreshCw, Code, Eye, CheckCircle, AlertCircle } from 'lucide-react'
+import { Plus, X, Save, RefreshCw, Code, Eye, CheckCircle, AlertCircle, List } from 'lucide-react'
 
 interface FilterRule {
   id: string
@@ -398,7 +398,7 @@ export function BundlerVisualFiltersBuilder({ service }: BundlerVisualFiltersBui
                     <CardTitle className="text-lg flex items-center gap-2">
                       {filterSet.name}
                       {filterSet.rules.length > 0 ? (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <CheckCircle className="h-5 w-5 text-white" />
                       ) : (
                         <AlertCircle className="h-5 w-5 text-gray-400" />
                       )}
@@ -469,6 +469,7 @@ export function BundlerVisualFiltersBuilder({ service }: BundlerVisualFiltersBui
                                 className="whitespace-nowrap"
                                 title="Switch to preset field selection"
                               >
+                                <List className="h-4 w-4 mr-2" />
                                 Presets
                               </Button>
                             </div>

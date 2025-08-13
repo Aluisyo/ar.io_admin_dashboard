@@ -45,10 +45,23 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-development",
   callbacks: {
     async redirect({ url, baseUrl }) {
-      // Allows relative callback URLs
-      if (url.startsWith("/")) return `${baseUrl}${url}`
-      // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url
+      // If url starts with /, it's a relative URL - use baseUrl
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`
+      }
+      
+      // If url is absolute and on same origin as baseUrl, allow it
+      try {
+        const urlOrigin = new URL(url).origin
+        const baseOrigin = new URL(baseUrl).origin
+        if (urlOrigin === baseOrigin) {
+          return url
+        }
+      } catch {
+        // Invalid URL, fallback to baseUrl
+      }
+      
+      // Default fallback - return baseUrl
       return baseUrl
     },
     async jwt({ token, user }) {

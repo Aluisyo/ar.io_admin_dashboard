@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, Cpu, Wallet, Clock, CheckCircle, AlertTriangle, Copy } from 'lucide-react'
+import { Cpu, Wallet, Clock, CheckCircle, AlertTriangle, Copy } from 'lucide-react'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { Button } from '@/components/ui/button'
 
 interface AOCUInfo {
@@ -85,10 +86,10 @@ export function AOComputeInfoCard() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Cpu className="h-5 w-5" />
+            <Cpu className="h-5 w-5 icon-info" />
             AO Compute Unit
           </CardTitle>
           <CardDescription>
@@ -97,8 +98,7 @@ export function AOComputeInfoCard() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            <span className="ml-2 text-gray-400">Loading AO CU info...</span>
+            <LoadingSpinner size="lg" message="Loading AO CU info..." />
           </div>
         </CardContent>
       </Card>
@@ -107,12 +107,12 @@ export function AOComputeInfoCard() {
 
   if (error && !aoCUInfo?.data) {
     return (
-      <Card>
+      <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Cpu className="h-5 w-5" />
+            <Cpu className="h-5 w-5 icon-info" />
             AO Compute Unit
-            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <AlertTriangle className="h-4 w-4 icon-error" />
           </CardTitle>
           <CardDescription>
             Information from AO compute unit service
@@ -120,7 +120,7 @@ export function AOComputeInfoCard() {
         </CardHeader>
         <CardContent>
           <Alert>
-            <AlertTriangle className="h-4 w-4" />
+            <AlertTriangle className="h-4 w-4 icon-error" />
             <AlertDescription>
               {error}
               {aoCUInfo?.endpoints && (
@@ -141,12 +141,12 @@ export function AOComputeInfoCard() {
   }
 
   return (
-    <Card>
+    <Card className="dashboard-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Cpu className="h-5 w-5" />
+          <Cpu className="h-5 w-5 icon-info" />
           AO Compute Unit
-          <CheckCircle className="h-4 w-4 text-green-500" />
+          <CheckCircle className="h-4 w-4 icon-success" />
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -154,7 +154,7 @@ export function AOComputeInfoCard() {
           {/* Address */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Wallet className="h-4 w-4 text-orange-400" />
+              <Wallet className="h-4 w-4 icon-warning" />
               <Badge variant="outline" className="text-xs">
                 CU Address
               </Badge>
@@ -178,7 +178,7 @@ export function AOComputeInfoCard() {
           {/* Timestamp */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-blue-400" />
+              <Clock className="h-4 w-4 icon-info" />
               <Badge variant="outline" className="text-xs">
                 Last Activity
               </Badge>

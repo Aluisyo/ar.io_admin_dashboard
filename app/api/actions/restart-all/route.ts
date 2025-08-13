@@ -3,6 +3,7 @@ import { exec } from 'child_process'
 import { promisify } from 'util'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { getNotificationsFromFile, saveNotificationsToFile } from '@/lib/notification-store'
 
 const execAsync = promisify(exec)
 
@@ -26,7 +27,44 @@ export async function POST() {
       execAsync(`docker restart ${name} 2>/dev/null`)
     )
 
-    await Promise.allSettled(restartPromises) // Use allSettled to ensure all promises run even if some fail
+    const results = await Promise.allSettled(restartPromises) // Use allSettled to ensure all promises run even if some fail
+    
+    // Count successful and failed restarts
+    const successCount = results.filter(result => result.status === 'fulfilled').length
+    const failCount = results.filter(result => result.status === 'rejected').length
+    
+    // Add notification
+    try {
+      const notifications = await getNotificationsFromFile()
+      const newId = notifications.length > 0 ? Math.max(...notifications.map(n => n.id)) + 1 : 1
+      
+      let message: string
+      let type: 'success' | 'warning' | 'error'
+      
+      if (failCount === 0) {
+        message = `All ${successCount} AR.IO services restarted successfully`
+        type = 'success'
+      } else if (successCount > 0) {
+        message = `${successCount} services restarted successfully, ${failCount} failed`
+        type = 'warning'
+      } else {
+        message = `Failed to restart all ${failCount} services`
+        type = 'error'
+      }
+      
+      const newNotification = {
+        id: newId,
+        message,
+        type,
+        time: new Date().toLocaleString(),
+        read: false
+      }
+      
+      notifications.unshift(newNotification)
+      await saveNotificationsToFile(notifications)
+    } catch (notificationError) {
+      console.error('Failed to add restart-all notification:', notificationError)
+    }
 
     return NextResponse.json({ success: true, message: 'Attempted to restart all AR.IO containers.' })
   } catch (error) {
