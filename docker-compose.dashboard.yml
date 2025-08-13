@@ -6,9 +6,13 @@ services:
     env_file:
       - .env.dashboard
     restart: unless-stopped
+    user: "$UID:$(id -g)"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp/ar-io-node:/tmp/ar-io-node
+      - $HOME/ar-io-backups:/home/node/ar-io-backups 
+    environment:
+      - HOME=/home/node
     networks:
       - ar-io-network
 
