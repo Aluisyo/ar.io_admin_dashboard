@@ -23,11 +23,15 @@ export async function addNotification(
     }
 
     const result = await response.json();
+<<<<<<< Updated upstream
     if (result.notification) {
       console.log('Notification added:', result.notification);
     } else {
       console.log('Duplicate notification prevented:', message);
     }
+=======
+    console.log('Notification added:', result.notification);
+>>>>>>> Stashed changes
     return true;
   } catch (error) {
     console.error('Error adding notification:', error);
@@ -49,6 +53,7 @@ export const notifyRestart = (serviceName?: string) => {
   return addSuccessNotification(message);
 };
 
+<<<<<<< Updated upstream
 export const notifyStopAll = (details?: { successCount: number, failCount: number, totalContainers: number }) => {
   if (!details) {
     return addSuccessNotification('All AR.IO services stopped successfully');
@@ -84,6 +89,11 @@ export const notifyStartAll = (details?: { started: number, failed: number, tota
 export const notifyBackup = (details?: { filesBackedUp: number, fileSize: string, backupPath: string }) => {
   const message = details 
     ? `Configuration backup completed: ${details.filesBackedUp} files backed up (${details.fileSize}) - saved to ${details.backupPath}`
+=======
+export const notifyBackup = (details?: { filesBackedUp: number, fileSize: string, backupPath: string }) => {
+  const message = details 
+    ? `Configuration backup completed: ${details.filesBackedUp} files backed up (${details.fileSize})`
+>>>>>>> Stashed changes
     : 'Configuration backup completed successfully';
   return addSuccessNotification(message);
 };
@@ -109,6 +119,7 @@ export const notifyBootLoop = (serviceName: string, restartCount: number) => {
     `Service "${serviceName}" appears to be in a boot loop (${restartCount} restarts in the last 5 minutes)`
   );
 };
+<<<<<<< Updated upstream
 
 // Container operation notifications
 export const notifyContainerStart = (serviceName: string) => {
@@ -147,3 +158,5 @@ export const notifyConfigurationChange = (component: string) => {
 export const notifyServiceUnhealthy = (serviceName: string, reason: string) => {
   return addWarningNotification(`${serviceName} service health check failed: ${reason}`);
 };
+=======
+>>>>>>> Stashed changes

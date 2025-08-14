@@ -5,7 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress'
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { Cpu, MemoryStick, HardDrive, Network, TrendingUp, Activity, Server, Database, Globe, Clock, Zap, Layers, Monitor, AlertTriangle } from 'lucide-react'
+<<<<<<< Updated upstream
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+=======
+>>>>>>> Stashed changes
 import dynamic from 'next/dynamic'
 import { Layout, Data } from 'plotly.js'
 
@@ -205,7 +208,11 @@ export function MetricsTab({ service }: MetricsTabProps) {
         <>
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+<<<<<<< Updated upstream
               <Server className="h-5 w-5 icon-info" />
+=======
+              <Server className="h-5 w-5 text-blue-500" />
+>>>>>>> Stashed changes
               AR.IO Gateway Metrics
             </h3>
           </div>

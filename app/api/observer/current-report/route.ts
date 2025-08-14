@@ -11,7 +11,10 @@ interface ObserverReport {
 }
 
 const OBSERVER_ENDPOINTS = [
+<<<<<<< Updated upstream
   'http://ar-io-node-observer-1:5050/ar-io/observer/reports/current',  // Docker service name (full container name)
+=======
+>>>>>>> Stashed changes
   'http://observer:5050/ar-io/observer/reports/current',
   'http://localhost:5050/ar-io/observer/reports/current',
   'http://127.0.0.1:5050/ar-io/observer/reports/current'
@@ -50,6 +53,7 @@ export async function GET(request: NextRequest) {
       if (response.ok) {
         const fullData = await response.json()
         
+<<<<<<< Updated upstream
         // Check if observer is still pending
         if (fullData.message && fullData.message === 'Report pending') {
           console.log(`Observer report pending from: ${endpoint}`)
@@ -75,6 +79,8 @@ export async function GET(request: NextRequest) {
           }, { status: 202 })
         }
         
+=======
+>>>>>>> Stashed changes
         // Extract only the fields we need
         const data: ObserverReport = {
           formatVersion: fullData.formatVersion,

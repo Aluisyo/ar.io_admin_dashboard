@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { readEnvFile, updateEnvFile } from '@/lib/env-utils';
 import { join } from 'path';
+<<<<<<< Updated upstream
 import { homedir } from 'os';
 
 // Helper function to expand tilde to home directory
@@ -15,6 +16,11 @@ function expandPath(path: string): string {
 
 // Use the AR_IO_NODE_PATH environment variable to locate the bundler .env file
 const AR_IO_NODE_PATH = expandPath(process.env.AR_IO_NODE_PATH || '~/ar-io-node');
+=======
+
+// Use the AR_IO_NODE_PATH environment variable to locate the bundler .env file
+const AR_IO_NODE_PATH = process.env.AR_IO_NODE_PATH || '/tmp/ar-io-node';
+>>>>>>> Stashed changes
 const ENV_FILE_PATH = join(AR_IO_NODE_PATH, '.env.bundler');
 
 export async function GET() {

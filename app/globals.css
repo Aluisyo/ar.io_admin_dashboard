@@ -190,4 +190,32 @@
     scrollbar-width: thin;
     scrollbar-color: #4b5563 #1f2937; /* thumb track */
   }
+  
+  /* Prevent text overflow and ensure proper wrapping */
+  .logs-container {
+    @apply relative w-full overflow-hidden;
+  }
+  
+  .logs-content {
+    @apply w-full h-full overflow-auto;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  
+  /* Ensure responsive behavior */
+  @media (max-width: 640px) {
+    .dashboard-card {
+      @apply mx-2;
+    }
+    
+    .logs-container {
+      @apply min-h-[300px] max-h-[400px];
+    }
+  }
+  
+  /* Ensure containers don't overflow viewport */
+  .main-content {
+    @apply w-full max-w-full overflow-x-hidden;
+  }
 }

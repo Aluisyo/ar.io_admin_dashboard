@@ -13,10 +13,15 @@ export async function GET(request: NextRequest) {
     // Try Docker network hostnames first, then localhost
     // Using the same approach as metrics and info endpoints
     const gatewayUrls = [
+<<<<<<< Updated upstream
       'http://ar-io-node-envoy-1:3000',        // Docker network (primary via envoy - full container name)
       'http://ar-io-node-core-1:4000',         // Docker network (direct to core - full container name)
       'http://envoy:3000',        // Docker network (primary via envoy - short alias)
       'http://core:4000',         // Docker network (direct to core - short alias)
+=======
+      'http://envoy:3000',        // Docker network (primary via envoy)
+      'http://core:4000',         // Docker network (direct to core)
+>>>>>>> Stashed changes
       'http://localhost:3000',    // Local development (via envoy)
       'http://localhost:4000'     // Local development (direct to core)
     ];
@@ -42,11 +47,15 @@ export async function GET(request: NextRequest) {
           detectedUrl = baseUrl;
           
           // Determine detection method based on URL
+<<<<<<< Updated upstream
           if (baseUrl.includes('ar-io-node-envoy-1:3000')) {
             detectionMethod = 'Docker network (via Envoy proxy - full container name)';
           } else if (baseUrl.includes('ar-io-node-core-1:4000')) {
             detectionMethod = 'Docker network (direct to core - full container name)';
           } else if (baseUrl.includes('envoy:3000')) {
+=======
+          if (baseUrl.includes('envoy:3000')) {
+>>>>>>> Stashed changes
             detectionMethod = 'Docker network (via Envoy proxy)';
           } else if (baseUrl.includes('core:4000')) {
             detectionMethod = 'Docker network (direct to core)';

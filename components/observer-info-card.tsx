@@ -6,7 +6,10 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Eye, Wallet, Clock, BarChart3, CheckCircle, AlertTriangle, Copy, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+<<<<<<< Updated upstream
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+=======
+>>>>>>> Stashed changes
 
 interface ObserverReport {
   formatVersion: number
@@ -65,17 +68,23 @@ export function ObserverInfoCard() {
   }, [])
 
   const formatTimestamp = (timestamp: number): string => {
+<<<<<<< Updated upstream
     if (!timestamp || isNaN(timestamp)) {
       return 'N/A'
     }
+=======
+>>>>>>> Stashed changes
     const date = new Date(timestamp)
     return date.toLocaleString()
   }
 
   const getRelativeTime = (timestamp: number): string => {
+<<<<<<< Updated upstream
     if (!timestamp || isNaN(timestamp)) {
       return 'N/A'
     }
+=======
+>>>>>>> Stashed changes
     const now = Date.now()
     const diff = Math.abs(now - timestamp) // Use absolute value for future times
     const seconds = Math.floor(diff / 1000)
@@ -102,10 +111,17 @@ export function ObserverInfoCard() {
 
   if (loading) {
     return (
+<<<<<<< Updated upstream
       <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Eye className="h-5 w-5 icon-info" />
+=======
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Eye className="h-5 w-5" />
+>>>>>>> Stashed changes
             Observer Current Report
           </CardTitle>
           <CardDescription>
@@ -113,7 +129,14 @@ export function ObserverInfoCard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+<<<<<<< Updated upstream
           <LoadingSpinner message="Loading Observer report..." />
+=======
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <span className="ml-2 text-gray-400">Loading Observer report...</span>
+          </div>
+>>>>>>> Stashed changes
         </CardContent>
       </Card>
     )
@@ -121,12 +144,21 @@ export function ObserverInfoCard() {
 
   if (error && !observerReport?.data) {
     return (
+<<<<<<< Updated upstream
       <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Eye className="h-5 w-5 icon-info" />
             Observer Current Report
             <AlertTriangle className="h-4 w-4 icon-error" />
+=======
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Eye className="h-5 w-5" />
+            Observer Current Report
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+>>>>>>> Stashed changes
           </CardTitle>
           <CardDescription>
             Current epoch report from Observer service
@@ -134,7 +166,11 @@ export function ObserverInfoCard() {
         </CardHeader>
         <CardContent>
           <Alert>
+<<<<<<< Updated upstream
             <AlertTriangle className="h-4 w-4 icon-error" />
+=======
+            <AlertTriangle className="h-4 w-4" />
+>>>>>>> Stashed changes
             <AlertDescription>
               {error}
               {observerReport?.endpoints && (
@@ -155,6 +191,7 @@ export function ObserverInfoCard() {
   }
 
   const currentTime = Date.now()
+<<<<<<< Updated upstream
   const epochProgress = getEpochProgress(data.epochStartTimestamp || 0, data.epochEndTimestamp || 0, currentTime)
 
   return (
@@ -164,6 +201,17 @@ export function ObserverInfoCard() {
           <Eye className="h-5 w-5 icon-info" />
           Observer Current Report
           <CheckCircle className="h-4 w-4 icon-success" />
+=======
+  const epochProgress = getEpochProgress(data.epochStartTimestamp, data.epochEndTimestamp, currentTime)
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Eye className="h-5 w-5" />
+          Observer Current Report
+          <CheckCircle className="h-4 w-4 text-green-500" />
+>>>>>>> Stashed changes
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -175,18 +223,30 @@ export function ObserverInfoCard() {
                 Format Version
               </Badge>
               <div className="text-lg font-semibold text-white">
+<<<<<<< Updated upstream
                 v{data.formatVersion ?? 'N/A'}
+=======
+                v{data.formatVersion}
+>>>>>>> Stashed changes
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
+<<<<<<< Updated upstream
                 <BarChart3 className="h-4 w-4 icon-info" />
+=======
+                <BarChart3 className="h-4 w-4 text-blue-400" />
+>>>>>>> Stashed changes
                 <Badge variant="outline" className="text-xs">
                   Epoch Index
                 </Badge>
               </div>
               <div className="text-lg font-semibold text-white">
+<<<<<<< Updated upstream
                 #{data.epochIndex ?? 'N/A'}
+=======
+                #{data.epochIndex}
+>>>>>>> Stashed changes
               </div>
             </div>
             <div className="space-y-2">
@@ -194,12 +254,20 @@ export function ObserverInfoCard() {
                 Start Height
               </Badge>
               <div className="text-lg font-semibold text-white">
+<<<<<<< Updated upstream
                 {data.epochStartHeight?.toLocaleString() ?? 'N/A'}
+=======
+                {data.epochStartHeight.toLocaleString()}
+>>>>>>> Stashed changes
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
+<<<<<<< Updated upstream
                 <Clock className="h-4 w-4 icon-info" />
+=======
+                <Clock className="h-4 w-4 text-blue-400" />
+>>>>>>> Stashed changes
                 <Badge variant="outline" className="text-xs">
                   Report Generated
                 </Badge>
@@ -213,15 +281,25 @@ export function ObserverInfoCard() {
           {/* Observer Address Row */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
+<<<<<<< Updated upstream
               <Wallet className="h-4 w-4 icon-primary" />
+=======
+              <Wallet className="h-4 w-4 text-orange-400" />
+>>>>>>> Stashed changes
               <Badge variant="outline" className="text-xs">
                 Observer Address
               </Badge>
             </div>
             <div className="flex items-center gap-2 p-3 bg-gray-800 rounded-lg">
+<<<<<<< Updated upstream
             <div className="text-sm font-mono text-white flex-1 break-all leading-relaxed">
               {data.observerAddress || 'N/A'}
             </div>
+=======
+              <div className="text-sm font-mono text-white flex-1 break-all leading-relaxed">
+                {data.observerAddress}
+              </div>
+>>>>>>> Stashed changes
               <Button
                 variant="ghost"
                 size="sm"
@@ -237,7 +315,11 @@ export function ObserverInfoCard() {
           {/* Epoch Progress Section */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
+<<<<<<< Updated upstream
               <Calendar className="h-4 w-4 icon-primary" />
+=======
+              <Calendar className="h-4 w-4 text-purple-400" />
+>>>>>>> Stashed changes
               <Badge variant="outline" className="text-xs">
                 Epoch Progress
               </Badge>
@@ -253,7 +335,11 @@ export function ObserverInfoCard() {
               </div>
               <div className="w-full bg-gray-800 rounded-full h-3">
                 <div 
+<<<<<<< Updated upstream
                   className="bg-white h-3 rounded-full transition-all duration-300"
+=======
+                  className="bg-purple-500 h-3 rounded-full transition-all duration-300" 
+>>>>>>> Stashed changes
                   style={{ width: `${epochProgress}%` }}
                 />
               </div>

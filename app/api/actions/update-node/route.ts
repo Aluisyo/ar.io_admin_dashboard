@@ -5,7 +5,10 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { join } from 'path'
 import { existsSync } from 'fs'
+<<<<<<< Updated upstream
 import { homedir } from 'os'
+=======
+>>>>>>> Stashed changes
 
 const execAsync = promisify(exec)
 
@@ -24,7 +27,11 @@ export async function POST() {
   }
 
   try {
+<<<<<<< Updated upstream
     const arIoNodePath = expandPath(process.env.AR_IO_NODE_PATH || '~/ar-io-node')
+=======
+    const arIoNodePath = process.env.AR_IO_NODE_PATH || '/tmp/ar-io-node'
+>>>>>>> Stashed changes
     const dockerComposeFile = join(arIoNodePath, 'docker-compose.yaml')
     const projectName = process.env.DOCKER_PROJECT || 'ar-io-node'
     
@@ -39,6 +46,7 @@ export async function POST() {
     
     const updateSteps = []
     
+<<<<<<< Updated upstream
     // Pull latest Docker images with better update detection
     console.log('Step 1: Pulling latest Docker images...')
     updateSteps.push('Pulling latest images')
@@ -53,11 +61,17 @@ export async function POST() {
       console.log('Could not get image list before pull, proceeding with pull...')
     }
     
+=======
+    // Step 1: Pull latest images
+    console.log('Step 1: Pulling latest Docker images...')
+    updateSteps.push('Pulling latest images')
+>>>>>>> Stashed changes
     const pullCommand = `cd "${arIoNodePath}" && docker compose -f docker-compose.yaml -p ${projectName} pull`
     const { stdout: pullOutput, stderr: pullError } = await execAsync(pullCommand)
     console.log('Pull output:', pullOutput)
     if (pullError) console.log('Pull warnings:', pullError)
     
+<<<<<<< Updated upstream
     // Get image IDs after pull to compare
     let afterImages = ''
     let imagesActuallyUpdated = false
@@ -80,6 +94,11 @@ export async function POST() {
     console.log('Images actually updated:', imagesActuallyUpdated)
     
     if (!imagesActuallyUpdated) {
+=======
+    // Check if any images were updated
+    const imageUpdateCheck = pullOutput.includes('Downloaded') || pullOutput.includes('Pulled')
+    if (!imageUpdateCheck && pullOutput.includes('up to date')) {
+>>>>>>> Stashed changes
       return NextResponse.json({ 
         success: true, 
         message: 'AR.IO Node is already up to date. No updates available.',
@@ -91,26 +110,42 @@ export async function POST() {
       })
     }
     
+<<<<<<< Updated upstream
     // Stop services gracefully
+=======
+    // Step 2: Stop services gracefully (but don't remove volumes)
+>>>>>>> Stashed changes
     console.log('Step 2: Stopping services...')
     updateSteps.push('Stopping services')
     const stopCommand = `cd "${arIoNodePath}" && docker compose -f docker-compose.yaml -p ${projectName} stop`
     await execAsync(stopCommand)
     
+<<<<<<< Updated upstream
     // Remove old containers for clean restart
+=======
+    // Step 3: Remove old containers to ensure clean restart
+>>>>>>> Stashed changes
     console.log('Step 3: Removing old containers...')
     updateSteps.push('Removing old containers')
     const rmCommand = `cd "${arIoNodePath}" && docker compose -f docker-compose.yaml -p ${projectName} rm -f`
     await execAsync(rmCommand)
     
+<<<<<<< Updated upstream
     // Start services with updated images
+=======
+    // Step 4: Start services with updated images
+>>>>>>> Stashed changes
     console.log('Step 4: Starting updated services...')
     updateSteps.push('Starting updated services')
     const upCommand = `cd "${arIoNodePath}" && docker compose -f docker-compose.yaml -p ${projectName} up -d`
     const { stdout: upOutput } = await execAsync(upCommand)
     console.log('Start output:', upOutput)
     
+<<<<<<< Updated upstream
     // Verify all services are running properly
+=======
+    // Step 5: Verify services are running
+>>>>>>> Stashed changes
     console.log('Step 5: Verifying services...')
     updateSteps.push('Verifying services')
     const psCommand = `cd "${arIoNodePath}" && docker compose -f docker-compose.yaml -p ${projectName} ps --format json`
@@ -125,15 +160,26 @@ export async function POST() {
       runningServices = services.filter(s => s.State === 'running').length
     } catch (parseError) {
       console.log('Could not parse service status, using fallback')
+<<<<<<< Updated upstream
       // Fallback container counting
       const { stdout: countOutput } = await execAsync(`docker ps -q --filter "label=com.docker.compose.project=${projectName}" | wc -l`)
       runningServices = parseInt(countOutput.trim()) || 0
       totalServices = runningServices
+=======
+      // Fallback: count containers
+      const { stdout: countOutput } = await execAsync(`docker ps -q --filter "label=com.docker.compose.project=${projectName}" | wc -l`)
+      runningServices = parseInt(countOutput.trim()) || 0
+      totalServices = runningServices // Assume all running containers are the total
+>>>>>>> Stashed changes
     }
     
     console.log(`Services status: ${runningServices}/${totalServices} running`)
     
+<<<<<<< Updated upstream
     const success = runningServices > 0 && runningServices >= totalServices * 0.8
+=======
+    const success = runningServices > 0 && runningServices >= totalServices * 0.8 // At least 80% should be running
+>>>>>>> Stashed changes
     
     if (success) {
       return NextResponse.json({ 

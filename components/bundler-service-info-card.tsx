@@ -6,7 +6,10 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Server, Wallet, Globe, HardDrive, CheckCircle, AlertTriangle, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+<<<<<<< Updated upstream
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+=======
+>>>>>>> Stashed changes
 
 interface BundlerInfo {
   version: string
@@ -64,7 +67,11 @@ export function BundlerServiceInfoCard() {
   }, [])
 
   const formatBytes = (bytes: number): string => {
+<<<<<<< Updated upstream
     if (!bytes || isNaN(bytes) || bytes === 0) return '0 Bytes'
+=======
+    if (bytes === 0) return '0 Bytes'
+>>>>>>> Stashed changes
     const k = 1024
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
@@ -78,10 +85,17 @@ export function BundlerServiceInfoCard() {
 
   if (loading) {
     return (
+<<<<<<< Updated upstream
       <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Server className="h-5 w-5 icon-info" />
+=======
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Server className="h-5 w-5" />
+>>>>>>> Stashed changes
             Bundler Service Info
           </CardTitle>
           <CardDescription>
@@ -89,7 +103,14 @@ export function BundlerServiceInfoCard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+<<<<<<< Updated upstream
           <LoadingSpinner message="Loading bundler info..." />
+=======
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <span className="ml-2 text-gray-400">Loading bundler info...</span>
+          </div>
+>>>>>>> Stashed changes
         </CardContent>
       </Card>
     )
@@ -97,12 +118,21 @@ export function BundlerServiceInfoCard() {
 
   if (error && !bundlerInfo?.data) {
     return (
+<<<<<<< Updated upstream
       <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Server className="h-5 w-5 icon-info" />
             Bundler Service Info
             <AlertTriangle className="h-4 w-4 icon-error" />
+=======
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Server className="h-5 w-5" />
+            Bundler Service Info
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+>>>>>>> Stashed changes
           </CardTitle>
           <CardDescription>
             Information from bundler service endpoint
@@ -110,7 +140,11 @@ export function BundlerServiceInfoCard() {
         </CardHeader>
         <CardContent>
           <Alert>
+<<<<<<< Updated upstream
             <AlertTriangle className="h-4 w-4 icon-error" />
+=======
+            <AlertTriangle className="h-4 w-4" />
+>>>>>>> Stashed changes
             <AlertDescription>
               {error}
               {bundlerInfo?.endpoints && (
@@ -131,12 +165,21 @@ export function BundlerServiceInfoCard() {
   }
 
   return (
+<<<<<<< Updated upstream
     <Card className="dashboard-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Server className="h-5 w-5 icon-info" />
           Bundler Service Info
           <CheckCircle className="h-4 w-4 icon-success" />
+=======
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Server className="h-5 w-5" />
+          Bundler Service Info
+          <CheckCircle className="h-4 w-4 text-green-500" />
+>>>>>>> Stashed changes
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -149,26 +192,42 @@ export function BundlerServiceInfoCard() {
               </Badge>
             </div>
             <div className="text-lg font-semibold text-white">
+<<<<<<< Updated upstream
               {data.version || 'N/A'}
+=======
+              {data.version}
+>>>>>>> Stashed changes
             </div>
           </div>
 
           {/* Arweave Address */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
+<<<<<<< Updated upstream
               <Wallet className="h-4 w-4 icon-primary" />
+=======
+              <Wallet className="h-4 w-4 text-orange-400" />
+>>>>>>> Stashed changes
               <Badge variant="outline" className="text-xs">
                 Arweave Address
               </Badge>
             </div>
             <div className="flex items-start gap-2">
               <div className="text-sm font-mono text-white break-all flex-1">
+<<<<<<< Updated upstream
                 {data.addresses?.arweave || 'N/A'}
+=======
+                {data.addresses.arweave}
+>>>>>>> Stashed changes
               </div>
               <Button
                 variant="ghost"
                 size="sm"
+<<<<<<< Updated upstream
                 onClick={() => navigator.clipboard.writeText(data.addresses?.arweave || '')}
+=======
+                onClick={() => navigator.clipboard.writeText(data.addresses.arweave)}
+>>>>>>> Stashed changes
                 className="h-6 w-6 p-0 text-gray-400 hover:text-white flex-shrink-0"
                 title="Copy address to clipboard"
               >
@@ -180,26 +239,42 @@ export function BundlerServiceInfoCard() {
           {/* Gateway */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
+<<<<<<< Updated upstream
               <Globe className="h-4 w-4 icon-info" />
+=======
+              <Globe className="h-4 w-4 text-blue-400" />
+>>>>>>> Stashed changes
               <Badge variant="outline" className="text-xs">
                 Gateway
               </Badge>
             </div>
             <div className="text-lg font-semibold text-white">
+<<<<<<< Updated upstream
               {data.gateway || 'N/A'}
+=======
+              {data.gateway}
+>>>>>>> Stashed changes
             </div>
           </div>
 
           {/* Free Upload Limit */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
+<<<<<<< Updated upstream
               <HardDrive className="h-4 w-4 icon-success" />
+=======
+              <HardDrive className="h-4 w-4 text-green-400" />
+>>>>>>> Stashed changes
               <Badge variant="outline" className="text-xs">
                 Upload Limit
               </Badge>
             </div>
             <div className="text-lg font-semibold text-white">
+<<<<<<< Updated upstream
               {formatBytes(data.freeUploadLimitBytes || 0)}
+=======
+              {formatBytes(data.freeUploadLimitBytes)}
+>>>>>>> Stashed changes
             </div>
           </div>
         </div>
