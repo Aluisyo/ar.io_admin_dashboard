@@ -3,9 +3,18 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { readEnvFile, updateEnvFile } from '@/lib/env-utils';
 import { join } from 'path';
+import { homedir } from 'os';
+
+// Helper function to expand tilde to home directory
+function expandPath(path: string): string {
+  if (path.startsWith('~/') || path === '~') {
+    return path.replace(/^~(?=$|\/|\\)/, homedir())
+  }
+  return path
+}
 
 // Use the AR_IO_NODE_PATH environment variable to locate the .env file
-const AR_IO_NODE_PATH = process.env.AR_IO_NODE_PATH || '/tmp/ar-io-node';
+const AR_IO_NODE_PATH = expandPath(process.env.AR_IO_NODE_PATH || '~/ar-io-node');
 const ENV_FILE_PATH = join(AR_IO_NODE_PATH, '.env');
 
 export async function GET() {

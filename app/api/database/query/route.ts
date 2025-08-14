@@ -4,11 +4,20 @@ import { promisify } from 'util'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { join } from 'path'
+import { homedir } from 'os'
 
 const execAsync = promisify(exec)
 
+// Helper function to expand tilde to home directory
+function expandPath(path: string): string {
+  if (path.startsWith('~/') || path === '~') {
+    return path.replace(/^~(?=$|\/|\\)/, homedir())
+  }
+  return path
+}
+
 // Assuming the AR_IO_NODE_PATH points to the base directory where data and configs are
-const AR_IO_NODE_PATH = process.env.AR_IO_NODE_PATH || '/tmp/ar-io-node';
+const AR_IO_NODE_PATH = expandPath(process.env.AR_IO_NODE_PATH || '~/ar-io-node');
 const GATEWAY_SQLITE_DB_PATH = join(AR_IO_NODE_PATH, 'data', 'gateway.sqlite');
 
 export async function POST(request: NextRequest) {

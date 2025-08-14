@@ -29,7 +29,7 @@ Professional web-based dashboard for monitoring, controlling, and managing AR.IO
    ADMIN_PASSWORD=admin
    NEXTAUTH_SECRET=your-secret-key  #generate with: openssl rand -base64 32
    NEXTAUTH_URL=http://localhost:3001
-   AR_IO_NODE_PATH=/tmp/ar-io-node
+   AR_IO_NODE_PATH=~/ar-io-node
    DOCKER_PROJECT=ar-io-node
    NEXT_PUBLIC_GRAFANA_URL=http://localhost:1024
    ADMIN_API_KEY=your-admin-api-key
@@ -84,7 +84,7 @@ docker-compose up
 or
 
 ```bash
-docker run -d --name ar-io-admin-dashboard --network ar-io-network -p 3001:3001 -v /var/run/docker.sock:/var/run/docker.sock -v /tmp/ar-io-node:/tmp/ar-io-node aluisyo/ar-io-admin-dashboard:latest
+docker run -d --name ar-io-admin-dashboard --network ar-io-network -p 3001:3001 -v /var/run/docker.sock:/var/run/docker.sock -v ~/ar-io-node:~/ar-io-node aluisyo/ar-io-admin-dashboard:latest
 ```
 
 ## License

@@ -32,7 +32,7 @@ export function ConfigurationTab({ service }: ConfigurationTabProps) {
     'ADMIN_PASSWORD': 'Password for dashboard login authentication', 
     'NEXTAUTH_SECRET': 'Secret key for NextAuth session encryption (generate with: openssl rand -base64 32)',
     'NEXTAUTH_URL': 'Base URL where the admin dashboard is hosted (e.g., http://localhost:3001)',
-    'AR_IO_NODE_PATH': 'Path to the AR.IO node directory (default: /tmp/ar-io-node)',
+    'AR_IO_NODE_PATH': 'Path to the AR.IO node directory (default: ~/ar-io-node)',
     'DOCKER_PROJECT': 'Docker Compose project name (default: ar-io-node)',
     'NEXT_PUBLIC_GRAFANA_URL': 'Public URL for Grafana dashboard (e.g., http://localhost:1024)',
     'ADMIN_API_KEY': 'API key for AR.IO admin endpoints - must match gateway configuration'

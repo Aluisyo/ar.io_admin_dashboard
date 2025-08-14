@@ -6,8 +6,17 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { join } from 'path'
 import { existsSync, mkdirSync } from 'fs'
 import { access, constants } from 'fs/promises'
+import { homedir } from 'os'
 
 const execAsync = promisify(exec)
+
+// Helper function to expand tilde to home directory
+function expandPath(path: string): string {
+  if (path.startsWith('~/') || path === '~') {
+    return path.replace(/^~(?=$|\/|\\)/, homedir())
+  }
+  return path
+}
 
 export async function POST() {
   const session = await getServerSession(authOptions)
@@ -16,7 +25,7 @@ export async function POST() {
   }
 
   try {
-    const arIoNodePath = process.env.AR_IO_NODE_PATH || '/tmp/ar-io-node'
+    const arIoNodePath = expandPath(process.env.AR_IO_NODE_PATH || '~/ar-io-node')
     const timestamp = new Date().toISOString().replace(/[:.-]/g, '_')
     const backupFileName = `config_backup_${timestamp}.tar.gz`
     

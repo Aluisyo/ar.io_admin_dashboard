@@ -8,10 +8,12 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /tmp/ar-io-node:/tmp/ar-io-node
-      - $HOME/ar-io-backups:/home/node/ar-io-backups 
+      - $HOME/ar-io-node:/home/node/ar-io-node
+      - $HOME/ar-io-backups:/home/node/ar-io-backups
+      - ./.env.dashboard:/app/.env.dashboard
     environment:
       - HOME=/home/node
+      - AR_IO_NODE_PATH=/home/node/ar-io-node
     networks:
       - ar-io-network
 

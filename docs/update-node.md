@@ -110,7 +110,7 @@ The system intelligently detects whether updates are needed:
 
 The update functionality uses these environment variables from your `.env.local`:
 
-- `AR_IO_NODE_PATH`: Path to your AR.IO node directory (default: `/tmp/ar-io-node`)
+- `AR_IO_NODE_PATH`: Path to your AR.IO node directory (default: `~/ar-io-node`)
 - `DOCKER_PROJECT`: Docker Compose project name (default: `ar-io-node`)
 
 ## Services Updated
@@ -142,7 +142,7 @@ If you prefer to update manually, you can run these commands in your AR.IO node 
 
 ```bash
 # Navigate to AR.IO node directory
-cd /tmp/ar-io-node
+cd ~/ar-io-node
 
 # Pull latest images
 docker compose -f docker-compose.yaml -p ar-io-node pull
