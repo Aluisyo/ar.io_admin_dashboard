@@ -10,11 +10,7 @@ import { LogsTab } from '@/components/tabs/logs-tab'
 import { AdminEndpointTab } from '@/components/tabs/admin-endpoint-tab'
 import { IndexingAndWebhookFiltersTab } from '@/components/tabs/indexing-and-webhook-filters-tab'
 import { BundlerFiltersTab } from '@/components/tabs/bundler-filters-tab'
-<<<<<<< Updated upstream
 import { DatabaseQueryTab } from '@/components/tabs/database-query-tab'
-=======
-import { DatabaseQueryTab } from '@/components/tabs/database-query-tab' // New import
->>>>>>> Stashed changes
 import { Activity } from 'lucide-react'
 import { BarChart3 } from 'lucide-react'
 import { Settings } from 'lucide-react'
@@ -29,13 +25,8 @@ import { Play } from 'lucide-react'
 import { Square } from 'lucide-react'
 import { RotateCcw } from 'lucide-react'
 import { Power } from 'lucide-react'
-<<<<<<< Updated upstream
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
-=======
-import { Button } from '@/components/ui/button' // Added Database icon
-import { useToast } from '@/components/ui/use-toast' // Toast hook
->>>>>>> Stashed changes
 
 interface DockerInfo { status: string }
 
@@ -65,11 +56,7 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
     fetchDockerInfo();
   }, [service]);
 
-<<<<<<< Updated upstream
   // Reset to overview tab when switching services
-=======
-  // Reset active tab to 'overview' when service changes
->>>>>>> Stashed changes
   useEffect(() => {
     setActiveTab('overview');
   }, [service]);
@@ -117,7 +104,6 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
   };
 
   const handlePrometheusDashboardClick = (e: React.MouseEvent) => {
-<<<<<<< Updated upstream
     e.preventDefault();
     const prometheusUrl = process.env.NEXT_PUBLIC_PROMETHEUS_URL || 'http://localhost:9090';
     window.open(prometheusUrl, '_blank');
@@ -133,23 +119,6 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
     tabColsClass = 'grid-cols-6';
   } else if (service === 'clickhouse') {
     tabColsClass = 'grid-cols-5';
-=======
-    e.preventDefault(); // Prevent the default tab change behavior
-    const prometheusUrl = process.env.NEXT_PUBLIC_PROMETHEUS_URL || 'http://localhost:9090';
-    window.open(prometheusUrl, '_blank'); // Open Prometheus in a new tab
-  };
-
-  // Determine the Tailwind grid columns class for TabsList
-  let tabColsClass = 'grid-cols-4'; // Base tabs: overview, metrics, configuration, logs
-  if (service === 'gateway') {
-    tabColsClass = 'grid-cols-7'; // Gateway: add admin endpoint, filters, database query
-  } else if (service === 'bundler') {
-    tabColsClass = 'grid-cols-5'; // Bundler: add filters tab
-  } else if (service === 'grafana') {
-    tabColsClass = 'grid-cols-6'; // Grafana: add grafana dashboard and prometheus tabs
-  } else if (service === 'clickhouse') {
-    tabColsClass = 'grid-cols-5'; // Clickhouse: add database query tab
->>>>>>> Stashed changes
   }
 
   return (
@@ -214,10 +183,6 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
             </>
           )}
 
-<<<<<<< Updated upstream
-=======
-          {/* Bundler Filters tab, only for bundler service */}
->>>>>>> Stashed changes
           {service === 'bundler' && (
             <TabsTrigger value="bundler-filters" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black">
               <Filter className="h-4 w-4" />
@@ -225,10 +190,6 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
             </TabsTrigger>
           )}
 
-<<<<<<< Updated upstream
-=======
-          {/* New Grafana Dashboard tab, only for grafana service */}
->>>>>>> Stashed changes
           {service === 'grafana' && (
             <TabsTrigger
               value="grafana-dashboard"
@@ -240,16 +201,9 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
             </TabsTrigger>
           )}
 
-<<<<<<< Updated upstream
           {service === 'grafana' && (
             <TabsTrigger
               value="prometheus-dashboard"
-=======
-          {/* New Prometheus Dashboard tab, only for grafana service */}
-          {service === 'grafana' && (
-            <TabsTrigger
-              value="prometheus-dashboard" // Unique value for this tab
->>>>>>> Stashed changes
               onClick={handlePrometheusDashboardClick}
               className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black"
             >
@@ -258,10 +212,6 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
             </TabsTrigger>
           )}
 
-<<<<<<< Updated upstream
-=======
-          {/* New Database Query tab, only for gateway and clickhouse services */}
->>>>>>> Stashed changes
           {(service === 'gateway' || service === 'clickhouse') && (
             <TabsTrigger
               value="database-query"
@@ -301,20 +251,12 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
           </>
         )}
 
-<<<<<<< Updated upstream
-=======
-        {/* Content for the Bundler Filters tab */}
->>>>>>> Stashed changes
         {service === 'bundler' && (
           <TabsContent value="bundler-filters" className="space-y-4">
             <BundlerFiltersTab service={service} />
           </TabsContent>
         )}
 
-<<<<<<< Updated upstream
-=======
-        {/* Content for the new Database Query tab */}
->>>>>>> Stashed changes
         {(service === 'gateway' || service === 'clickhouse') && (
           <TabsContent value="database-query" className="space-y-4">
             <DatabaseQueryTab service={service} />

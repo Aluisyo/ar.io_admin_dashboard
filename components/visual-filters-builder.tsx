@@ -8,11 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-<<<<<<< Updated upstream
 import { Plus, X, Save, RefreshCw, Code, Eye, HelpCircle, CheckCircle, AlertCircle, List } from 'lucide-react'
-=======
-import { Plus, X, Save, RefreshCw, Code, Eye, HelpCircle, CheckCircle, AlertCircle } from 'lucide-react'
->>>>>>> Stashed changes
 import { FilterExamples } from '@/components/filter-examples'
 
 interface FilterRule {
@@ -109,11 +105,7 @@ export function VisualFiltersBuilder({ service }: VisualFiltersBuilderProps) {
       if (response.ok) {
         const data = await response.json()
         
-<<<<<<< Updated upstream
         // Transform API response to visual builder format
-=======
-        // Convert API data to visual builder format
->>>>>>> Stashed changes
         const newFilterSets = { ...filterSets }
         
         Object.entries(data).forEach(([key, value]) => {
@@ -140,11 +132,7 @@ export function VisualFiltersBuilder({ service }: VisualFiltersBuilderProps) {
   const parseFilterToRules = (filter: any): FilterRule[] => {
     const rules: FilterRule[] = []
     
-<<<<<<< Updated upstream
     // Parse special filter conditions
-=======
-    // Handle special cases like {"never": true}
->>>>>>> Stashed changes
     if (filter.never === true) {
       rules.push({
         id: generateRuleId(),
@@ -225,21 +213,13 @@ export function VisualFiltersBuilder({ service }: VisualFiltersBuilderProps) {
       } else if (rule.type === 'attribute') {
         let value: any = rule.value
         
-<<<<<<< Updated upstream
         // Process special filter fields
-=======
-        // Handle special cases like 'never' field
->>>>>>> Stashed changes
         if (rule.field === 'never' && rule.value === 'true') {
           filter.never = true
           return
         }
         
-<<<<<<< Updated upstream
         // Convert numeric string values to numbers
-=======
-        // Try to convert numeric values
->>>>>>> Stashed changes
         if (!isNaN(Number(rule.value))) {
           value = Number(rule.value)
         }
@@ -416,11 +396,7 @@ export function VisualFiltersBuilder({ service }: VisualFiltersBuilderProps) {
                     <CardTitle className="text-lg flex items-center gap-2">
                       {filterSet.name}
                       {filterSet.rules.length > 0 ? (
-<<<<<<< Updated upstream
                         <CheckCircle className="h-5 w-5 text-white" />
-=======
-                        <CheckCircle className="h-5 w-5 text-green-500" />
->>>>>>> Stashed changes
                       ) : (
                         <AlertCircle className="h-5 w-5 text-gray-400" />
                       )}
@@ -491,10 +467,7 @@ export function VisualFiltersBuilder({ service }: VisualFiltersBuilderProps) {
                                 className="whitespace-nowrap"
                                 title="Switch to preset field selection"
                               >
-<<<<<<< Updated upstream
                                 <List className="h-4 w-4 mr-2" />
-=======
->>>>>>> Stashed changes
                                 Presets
                               </Button>
                             </div>

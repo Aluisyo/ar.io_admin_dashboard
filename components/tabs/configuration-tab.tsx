@@ -7,10 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Save, RefreshCw, PlusCircle, Trash2, Info } from 'lucide-react'
-<<<<<<< Updated upstream
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-=======
->>>>>>> Stashed changes
 
 interface ConfigVar {
   id: number;
@@ -35,11 +32,7 @@ export function ConfigurationTab({ service }: ConfigurationTabProps) {
     'ADMIN_PASSWORD': 'Password for dashboard login authentication', 
     'NEXTAUTH_SECRET': 'Secret key for NextAuth session encryption (generate with: openssl rand -base64 32)',
     'NEXTAUTH_URL': 'Base URL where the admin dashboard is hosted (e.g., http://localhost:3001)',
-<<<<<<< Updated upstream
     'AR_IO_NODE_PATH': 'Path to the AR.IO node directory (default: ~/ar-io-node)',
-=======
-    'AR_IO_NODE_PATH': 'Path to the AR.IO node directory (default: /tmp/ar-io-node)',
->>>>>>> Stashed changes
     'DOCKER_PROJECT': 'Docker Compose project name (default: ar-io-node)',
     'NEXT_PUBLIC_GRAFANA_URL': 'Public URL for Grafana dashboard (e.g., http://localhost:1024)',
     'ADMIN_API_KEY': 'API key for AR.IO admin endpoints - must match gateway configuration'
@@ -209,13 +202,8 @@ export function ConfigurationTab({ service }: ConfigurationTabProps) {
         )}
         
         {service === 'admin' && (
-<<<<<<< Updated upstream
           <Alert className="border-gray-600 bg-gray-800">
             <AlertDescription className="text-white">
-=======
-          <Alert className="border-yellow-600 bg-yellow-950/20">
-            <AlertDescription className="text-yellow-200">
->>>>>>> Stashed changes
               <strong>Important:</strong> Changes to the Admin Dashboard configuration require restarting the admin service to take effect. 
               Some changes (like NEXTAUTH_SECRET) may require clearing browser sessions.
             </AlertDescription>
@@ -248,20 +236,12 @@ export function ConfigurationTab({ service }: ConfigurationTabProps) {
                     placeholder="value"
                     value={configVar.value}
                     onChange={(e) => handleVariableChange(configVar.id, 'value', e.target.value)}
-<<<<<<< Updated upstream
                     className="form-input"
-=======
-                    className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-400"
->>>>>>> Stashed changes
                     type={configVar.key.toLowerCase().includes('password') || configVar.key.toLowerCase().includes('secret') ? 'password' : 'text'}
                   />
                   {service === 'admin' && ADMIN_ENV_HINTS[configVar.key] && (
                     <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-<<<<<<< Updated upstream
                       <Info className="h-4 w-4 icon-info" title={ADMIN_ENV_HINTS[configVar.key]} />
-=======
-                      <Info className="h-4 w-4 text-gray-400" title={ADMIN_ENV_HINTS[configVar.key]} />
->>>>>>> Stashed changes
                     </div>
                   )}
                 </div>

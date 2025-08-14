@@ -57,11 +57,7 @@ function parseContainers(stdout: string) {
     
     // Map specific container names to service IDs
     if (name.includes('core')) serviceId = 'gateway'
-<<<<<<< Updated upstream
     if (name.includes('upload-service')) serviceId = 'bundler'
-=======
-    if (name.includes('upload-service')) serviceId = 'bundler' // Assuming bundler maps to upload-service
->>>>>>> Stashed changes
     if (name.includes('admin') || name.includes('dashboard')) serviceId = 'admin'
     
     // Filter to allowed services only
@@ -88,30 +84,18 @@ function parseContainers(stdout: string) {
     }
   }).filter(Boolean)
 
-<<<<<<< Updated upstream
   // Add admin dashboard service if not found in containers
-=======
-  // Check if admin dashboard is missing and add it as a standalone service
->>>>>>> Stashed changes
   const hasAdmin = containers.some(c => c.serviceId === 'admin')
   if (!hasAdmin) {
     containers.push({
       name: 'Admin Dashboard',
       container: 'ar-io-admin-dashboard',
       serviceId: 'admin',
-<<<<<<< Updated upstream
       status: 'running',
       uptime: 'N/A',
       cpu: 5,
       memory: 10,
       ports: ['3001:3001']
-=======
-      status: 'running', // Assume it's running since we're using it
-      uptime: 'N/A',
-      cpu: 5, // Low CPU for dashboard
-      memory: 10, // Low memory for dashboard
-      ports: ['3001:3001'] // Default admin dashboard port
->>>>>>> Stashed changes
     })
   }
 

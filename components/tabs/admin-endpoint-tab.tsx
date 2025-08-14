@@ -18,11 +18,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
   const [gatewayUrl, setGatewayUrl] = useState<string>('');
   const [adminApiKey, setAdminApiKey] = useState<string>('');
 
-<<<<<<< Updated upstream
   // State management for all admin endpoints
-=======
-  // All state for different endpoints
->>>>>>> Stashed changes
   const [states, setStates] = useState({
     debug: { response: '', loading: false, error: '' },
     queueTx: { id: '', response: '', loading: false, error: '' },
@@ -129,11 +125,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
     inputs?: any[],
     requiredFields?: string[]
   ) => {
-<<<<<<< Updated upstream
     // Validate required field completion
-=======
-    // Check if all required fields have values
->>>>>>> Stashed changes
     const hasRequiredFields = !requiredFields || requiredFields.every(field => {
       const fieldValue = states[stateKey][field];
       return fieldValue && fieldValue.toString().trim() !== '';
@@ -155,11 +147,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
             <div key={idx} className="space-y-2">
               <Label htmlFor={input.id} className="text-white">
                 {input.label}
-<<<<<<< Updated upstream
                 {input.required && <span className="text-white ml-1">*</span>}
-=======
-                {input.required && <span className="text-red-400 ml-1">*</span>}
->>>>>>> Stashed changes
               </Label>
               {input.type === 'textarea' ? (
                 <Textarea
@@ -167,15 +155,9 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
                   value={input.value}
                   onChange={input.onChange}
                   placeholder={input.placeholder}
-<<<<<<< Updated upstream
                   className={`form-textarea ${
                     input.required && (!input.value || input.value.trim() === '') 
                       ? 'border-gray-500 focus:border-gray-400'
-=======
-                  className={`min-h-[120px] font-mono text-sm bg-gray-900 border-gray-700 text-white placeholder:text-gray-400 ${
-                    input.required && (!input.value || input.value.trim() === '') 
-                      ? 'border-red-500 focus:border-red-400' 
->>>>>>> Stashed changes
                       : ''
                   }`}
                 />
@@ -186,15 +168,9 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
                   value={input.value}
                   onChange={input.onChange}
                   placeholder={input.placeholder}
-<<<<<<< Updated upstream
                   className={`form-input ${
                     input.required && (!input.value || input.value.trim() === '') 
                       ? 'border-gray-500 focus:border-gray-400'
-=======
-                  className={`bg-gray-900 border-gray-700 text-white placeholder:text-gray-400 ${
-                    input.required && (!input.value || input.value.trim() === '') 
-                      ? 'border-red-500 focus:border-red-400' 
->>>>>>> Stashed changes
                       : ''
                   }`}
                 />
@@ -210,11 +186,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
               !hasRequiredFields
             }
           >
-<<<<<<< Updated upstream
             {React.cloneElement(icon, { className: `${icon.props.className || ''} mr-2 text-black` })}
-=======
-            {icon}
->>>>>>> Stashed changes
             {states[stateKey].loading ? 'Processing...' : buttonText}
           </Button>
         {states[stateKey].error && (
@@ -236,14 +208,8 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
 
   return (
     <div className="space-y-6">
-<<<<<<< Updated upstream
       {renderCard(
         <Bug className="h-5 w-5 icon-info" />,
-=======
-      {/* Debug Endpoint */}
-      {renderCard(
-        <Bug className="h-5 w-5 text-purple-600" />,
->>>>>>> Stashed changes
         "Debug Endpoint",
         "Get a comprehensive view of the current state of your Gateway.",
         "debug",
@@ -251,14 +217,8 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
         () => handleApiCall('debug', 'debug')
       )}
 
-<<<<<<< Updated upstream
       {renderCard(
         <Send className="h-5 w-5 icon-primary" />,
-=======
-      {/* Queue Transaction */}
-      {renderCard(
-        <Send className="h-5 w-5 text-purple-600" />,
->>>>>>> Stashed changes
         "Queue Transaction",
         "Prioritize processing of a specific transaction or bundle.",
         "queueTx",
@@ -275,14 +235,8 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
         ['id']
       )}
 
-<<<<<<< Updated upstream
       {renderCard(
         <Package className="h-5 w-5 icon-success" />,
-=======
-      {/* Queue Bundle */}
-      {renderCard(
-        <Package className="h-5 w-5 text-green-600" />,
->>>>>>> Stashed changes
         "Queue Bundle",
         "Queue a bundle for indexing, bypassing any filter settings by default.",
         "queueBundle",
@@ -299,14 +253,8 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
         ['id']
       )}
 
-<<<<<<< Updated upstream
       {renderCard(
         <Database className="h-5 w-5 icon-info" />,
-=======
-      {/* Queue Data Item */}
-      {renderCard(
-        <Database className="h-5 w-5 text-blue-600" />,
->>>>>>> Stashed changes
         "Queue Data Item",
         "Queue data items for indexing using JSON array of data item headers.",
         "queueDataItem",
@@ -334,14 +282,8 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
         ['dataItemsJson']
       )}
 
-<<<<<<< Updated upstream
       {renderCard(
         <FileSearch className="h-5 w-5 icon-warning" />,
-=======
-      {/* Bundle Status */}
-      {renderCard(
-        <FileSearch className="h-5 w-5 text-yellow-600" />,
->>>>>>> Stashed changes
         "Bundle Status",
         "Get bundle processing status.",
         "bundleStatus",
@@ -358,14 +300,8 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
         ['id']
       )}
 
-<<<<<<< Updated upstream
       {renderCard(
         <Ban className="h-5 w-5 icon-error" />,
-=======
-      {/* Block Data */}
-      {renderCard(
-        <Ban className="h-5 w-5 text-red-600" />,
->>>>>>> Stashed changes
         "Block Data",
         "Blocks transactions or data-items so your AR.IO Gateway will not serve them.",
         "blockData",
@@ -402,14 +338,8 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
         ['id']
       )}
 
-<<<<<<< Updated upstream
       {renderCard(
         <Shield className="h-5 w-5 icon-warning" />,
-=======
-      {/* Block Name */}
-      {renderCard(
-        <Shield className="h-5 w-5 text-orange-600" />,
->>>>>>> Stashed changes
         "Block ARNS Name",
         "Blocks an ARNS name so your AR.IO Gateway will not serve it.",
         "blockName",
@@ -446,14 +376,8 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
         ['name']
       )}
 
-<<<<<<< Updated upstream
       {renderCard(
         <ShieldOff className="h-5 w-5 icon-success" />,
-=======
-      {/* Unblock Name */}
-      {renderCard(
-        <ShieldOff className="h-5 w-5 text-green-600" />,
->>>>>>> Stashed changes
         "Unblock ARNS Name",
         "Unblock an ARNS name.",
         "unblockName",
@@ -470,14 +394,8 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
         ['name']
       )}
 
-<<<<<<< Updated upstream
       {renderCard(
         <Download className="h-5 w-5 icon-info" />,
-=======
-      {/* Export Parquet */}
-      {renderCard(
-        <Download className="h-5 w-5 text-cyan-600" />,
->>>>>>> Stashed changes
         "Export Parquet",
         "Export data to Parquet format with specified parameters.",
         "exportParquet",
@@ -525,14 +443,8 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
         ['outputDir', 'startHeight', 'endHeight', 'maxFileRows']
       )}
 
-<<<<<<< Updated upstream
       {renderCard(
         <FileSearch className="h-5 w-5 icon-info" />,
-=======
-      {/* Export Parquet Status */}
-      {renderCard(
-        <FileSearch className="h-5 w-5 text-cyan-600" />,
->>>>>>> Stashed changes
         "Export Parquet Status",
         "Get Parquet export status.",
         "exportStatus",
@@ -540,14 +452,8 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
         () => handleApiCall('export-parquet-status', 'exportStatus')
       )}
 
-<<<<<<< Updated upstream
       {renderCard(
         <Trash2 className="h-5 w-5 icon-error" />,
-=======
-      {/* Prune Stable Data Items */}
-      {renderCard(
-        <Trash2 className="h-5 w-5 text-red-600" />,
->>>>>>> Stashed changes
         "Prune Stable Data Items",
         "Prune stable data items indexed before the specified timestamp.",
         "pruneData",

@@ -13,10 +13,6 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-<<<<<<< Updated upstream
-=======
-# Update package index and install dependencies with retry logic
->>>>>>> Stashed changes
 RUN apk update && \
     apk add \
         docker-cli \
@@ -24,15 +20,10 @@ RUN apk update && \
         git \
         bash \
         curl \
-<<<<<<< Updated upstream
         wget \
         sqlite && \
     curl -L https://clickhouse.com/cli -o /usr/local/bin/clickhouse-client && \
     chmod +x /usr/local/bin/clickhouse-client
-=======
-        wget
-
->>>>>>> Stashed changes
 
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/node_modules ./node_modules

@@ -6,12 +6,8 @@ interface AOCUInfo {
 }
 
 const AO_CU_ENDPOINTS = [
-<<<<<<< Updated upstream
   'http://ar-io-node-ao-cu-1:6363',  // Docker service name (full container name)
   'http://ao-cu:6363',               // Docker service name (short alias, if configured)
-=======
-  'http://ao-cu:6363',
->>>>>>> Stashed changes
   'http://localhost:6363',
   'http://127.0.0.1:6363'
 ]

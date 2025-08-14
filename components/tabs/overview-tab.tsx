@@ -5,10 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Play, Square, RotateCcw, Power, Clock, Cpu, MemoryStick, Network, Activity, Server, Wallet, Hash, Copy } from 'lucide-react'
-<<<<<<< Updated upstream
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-=======
->>>>>>> Stashed changes
 import { BundlerServiceInfoCard } from '@/components/bundler-service-info-card'
 import { AOComputeInfoCard } from '@/components/ao-compute-info-card'
 import { ObserverInfoCard } from '@/components/observer-info-card'
@@ -52,21 +49,13 @@ export function OverviewTab({ service }: OverviewTabProps) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-<<<<<<< Updated upstream
         // Fetch container info and metrics in parallel
-=======
-        // Fetch both info and metrics in parallel
->>>>>>> Stashed changes
         const fetchPromises = [
           fetch(`/api/docker/${service}/info`),
           fetch(`/api/docker/${service}/metrics`)
         ]
         
-<<<<<<< Updated upstream
         // Fetch additional gateway info for gateway service
-=======
-        // Add gateway info fetch only for gateway service
->>>>>>> Stashed changes
         if (service === 'gateway') {
           fetchPromises.push(fetch('/api/ar-io-gateway/info'))
         }
@@ -84,17 +73,10 @@ export function OverviewTab({ service }: OverviewTabProps) {
           setMetrics(metricsData)
         }
         
-<<<<<<< Updated upstream
         // Process gateway info response
         if (service === 'gateway' && gatewayInfoResponse && gatewayInfoResponse.ok) {
           const gatewayData = await gatewayInfoResponse.json()
           // Extract gateway info from API response
-=======
-        // Handle gateway info response if it exists
-        if (service === 'gateway' && gatewayInfoResponse && gatewayInfoResponse.ok) {
-          const gatewayData = await gatewayInfoResponse.json()
-          // Extract the actual info from the API response wrapper
->>>>>>> Stashed changes
           setGatewayInfo(gatewayData.info || gatewayData)
         }
       } catch (error) {
@@ -147,38 +129,21 @@ export function OverviewTab({ service }: OverviewTabProps) {
   return (
     <div className="space-y-6">
       
-<<<<<<< Updated upstream
-=======
-      {/* Gateway Information - only for gateway service - TOP PRIORITY */}
->>>>>>> Stashed changes
       {service === 'gateway' && gatewayInfo && (
         <Card className="dashboard-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-<<<<<<< Updated upstream
               <Server className="h-5 w-5 icon-info" />
-=======
-              <Server className="h-5 w-5 text-blue-500" />
->>>>>>> Stashed changes
               AR.IO Gateway Information
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-<<<<<<< Updated upstream
               {gatewayInfo.wallet && (
                 <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-gray-800 rounded">
                       <Wallet className="h-4 w-4 icon-success" />
-=======
-              {/* Wallet Address */}
-              {gatewayInfo.wallet && (
-                <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-100 rounded">
-                      <Wallet className="h-4 w-4 text-green-600" />
->>>>>>> Stashed changes
                     </div>
                     <div>
                       <p className="font-medium text-white">Gateway Wallet Address</p>
@@ -200,20 +165,11 @@ export function OverviewTab({ service }: OverviewTabProps) {
                 </div>
               )}
               
-<<<<<<< Updated upstream
               {gatewayInfo.processId && (
                 <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-gray-800 rounded">
                       <Hash className="h-4 w-4 icon-primary" />
-=======
-              {/* Process ID */}
-              {gatewayInfo.processId && (
-                <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 rounded">
-                      <Hash className="h-4 w-4 text-purple-600" />
->>>>>>> Stashed changes
                     </div>
                     <div>
                       <p className="font-medium text-white">Process ID</p>
@@ -235,20 +191,11 @@ export function OverviewTab({ service }: OverviewTabProps) {
                 </div>
               )}
               
-<<<<<<< Updated upstream
               {(gatewayInfo.ans104UnbundleFilter || gatewayInfo.ans104IndexFilter) && (
                 <div className="p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="p-2 bg-gray-800 rounded">
                       <Hash className="h-4 w-4 icon-warning" />
-=======
-              {/* ANS-104 Filter Configurations */}
-              {(gatewayInfo.ans104UnbundleFilter || gatewayInfo.ans104IndexFilter) && (
-                <div className="p-3 bg-gray-800 rounded-lg">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-yellow-100 rounded">
-                      <Hash className="h-4 w-4 text-yellow-600" />
->>>>>>> Stashed changes
                     </div>
                     <div>
                       <p className="font-medium text-white">ANS-104 Filter Configurations</p>
@@ -257,11 +204,7 @@ export function OverviewTab({ service }: OverviewTabProps) {
                   <div className="bg-gray-900 rounded p-3 max-h-48 overflow-auto space-y-3">
                     {gatewayInfo.ans104UnbundleFilter && (
                       <div>
-<<<<<<< Updated upstream
                         <p className="text-xs font-semibold text-white mb-1">Unbundle Filter:</p>
-=======
-                        <p className="text-xs font-semibold text-blue-400 mb-1">Unbundle Filter:</p>
->>>>>>> Stashed changes
                         <pre className="text-xs text-gray-300">
                           {JSON.stringify(gatewayInfo.ans104UnbundleFilter, null, 2)}
                         </pre>
@@ -269,11 +212,7 @@ export function OverviewTab({ service }: OverviewTabProps) {
                     )}
                     {gatewayInfo.ans104IndexFilter && (
                       <div>
-<<<<<<< Updated upstream
                         <p className="text-xs font-semibold text-white mb-1">Index Filter:</p>
-=======
-                        <p className="text-xs font-semibold text-green-400 mb-1">Index Filter:</p>
->>>>>>> Stashed changes
                         <pre className="text-xs text-gray-300">
                           {JSON.stringify(gatewayInfo.ans104IndexFilter, null, 2)}
                         </pre>
@@ -283,20 +222,11 @@ export function OverviewTab({ service }: OverviewTabProps) {
                 </div>
               )}
               
-<<<<<<< Updated upstream
               {gatewayInfo.supportedManifestVersions && gatewayInfo.supportedManifestVersions.length > 0 && (
                 <div className="p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="p-2 bg-gray-800 rounded">
                       <Activity className="h-4 w-4 icon-warning" />
-=======
-              {/* Supported Manifest Versions */}
-              {gatewayInfo.supportedManifestVersions && gatewayInfo.supportedManifestVersions.length > 0 && (
-                <div className="p-3 bg-gray-800 rounded-lg">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-orange-100 rounded">
-                      <Activity className="h-4 w-4 text-orange-600" />
->>>>>>> Stashed changes
                     </div>
                     <div>
                       <p className="font-medium text-white">Supported Manifest Versions</p>
@@ -316,13 +246,8 @@ export function OverviewTab({ service }: OverviewTabProps) {
               {gatewayInfo.release && (
                 <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-3">
-<<<<<<< Updated upstream
                     <div className="p-2 bg-gray-800 rounded">
                       <Network className="h-4 w-4 icon-info" />
-=======
-                    <div className="p-2 bg-blue-100 rounded">
-                      <Network className="h-4 w-4 text-blue-600" />
->>>>>>> Stashed changes
                     </div>
                     <div>
                       <p className="font-medium text-white">Gateway Software Release Version</p>
@@ -483,13 +408,8 @@ export function OverviewTab({ service }: OverviewTabProps) {
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-<<<<<<< Updated upstream
                     <div className="p-1 bg-gray-800 rounded">
                       <Activity className="h-3 w-3 icon-primary" />
-=======
-                    <div className="p-1 bg-purple-100 rounded">
-                      <Activity className="h-3 w-3 text-purple-600" />
->>>>>>> Stashed changes
                     </div>
                     <span className="text-sm font-medium text-white">Network In</span>
                   </div>
@@ -497,13 +417,8 @@ export function OverviewTab({ service }: OverviewTabProps) {
                 </div>
                 <div className="flex flex-col p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-<<<<<<< Updated upstream
                     <div className="p-1 bg-gray-800 rounded">
                       <Activity className="h-3 w-3 icon-warning" />
-=======
-                    <div className="p-1 bg-orange-100 rounded">
-                      <Activity className="h-3 w-3 text-orange-600" />
->>>>>>> Stashed changes
                     </div>
                     <span className="text-sm font-medium text-white">Network Out</span>
                   </div>

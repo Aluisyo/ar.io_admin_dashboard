@@ -4,12 +4,8 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-<<<<<<< Updated upstream
 import { Cpu, Wallet, Clock, CheckCircle, AlertTriangle, Copy } from 'lucide-react'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-=======
-import { Loader2, Cpu, Wallet, Clock, CheckCircle, AlertTriangle, Copy } from 'lucide-react'
->>>>>>> Stashed changes
 import { Button } from '@/components/ui/button'
 
 interface AOCUInfo {
@@ -64,23 +60,17 @@ export function AOComputeInfoCard() {
   }, [])
 
   const formatTimestamp = (timestamp: number): string => {
-<<<<<<< Updated upstream
     if (!timestamp || isNaN(timestamp)) {
       return 'N/A'
     }
-=======
->>>>>>> Stashed changes
     const date = new Date(timestamp)
     return date.toLocaleString()
   }
 
   const getRelativeTime = (timestamp: number): string => {
-<<<<<<< Updated upstream
     if (!timestamp || isNaN(timestamp)) {
       return 'N/A'
     }
-=======
->>>>>>> Stashed changes
     const now = Date.now()
     const diff = now - timestamp
     const seconds = Math.floor(diff / 1000)
@@ -96,17 +86,10 @@ export function AOComputeInfoCard() {
 
   if (loading) {
     return (
-<<<<<<< Updated upstream
       <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Cpu className="h-5 w-5 icon-info" />
-=======
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Cpu className="h-5 w-5" />
->>>>>>> Stashed changes
             AO Compute Unit
           </CardTitle>
           <CardDescription>
@@ -115,12 +98,7 @@ export function AOComputeInfoCard() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-<<<<<<< Updated upstream
             <LoadingSpinner size="lg" message="Loading AO CU info..." />
-=======
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            <span className="ml-2 text-gray-400">Loading AO CU info...</span>
->>>>>>> Stashed changes
           </div>
         </CardContent>
       </Card>
@@ -129,21 +107,12 @@ export function AOComputeInfoCard() {
 
   if (error && !aoCUInfo?.data) {
     return (
-<<<<<<< Updated upstream
       <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Cpu className="h-5 w-5 icon-info" />
             AO Compute Unit
             <AlertTriangle className="h-4 w-4 icon-error" />
-=======
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Cpu className="h-5 w-5" />
-            AO Compute Unit
-            <AlertTriangle className="h-4 w-4 text-red-500" />
->>>>>>> Stashed changes
           </CardTitle>
           <CardDescription>
             Information from AO compute unit service
@@ -151,11 +120,7 @@ export function AOComputeInfoCard() {
         </CardHeader>
         <CardContent>
           <Alert>
-<<<<<<< Updated upstream
             <AlertTriangle className="h-4 w-4 icon-error" />
-=======
-            <AlertTriangle className="h-4 w-4" />
->>>>>>> Stashed changes
             <AlertDescription>
               {error}
               {aoCUInfo?.endpoints && (
@@ -176,21 +141,12 @@ export function AOComputeInfoCard() {
   }
 
   return (
-<<<<<<< Updated upstream
     <Card className="dashboard-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Cpu className="h-5 w-5 icon-info" />
           AO Compute Unit
           <CheckCircle className="h-4 w-4 icon-success" />
-=======
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Cpu className="h-5 w-5" />
-          AO Compute Unit
-          <CheckCircle className="h-4 w-4 text-green-500" />
->>>>>>> Stashed changes
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -198,22 +154,14 @@ export function AOComputeInfoCard() {
           {/* Address */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-<<<<<<< Updated upstream
               <Wallet className="h-4 w-4 icon-warning" />
-=======
-              <Wallet className="h-4 w-4 text-orange-400" />
->>>>>>> Stashed changes
               <Badge variant="outline" className="text-xs">
                 CU Address
               </Badge>
             </div>
             <div className="flex items-start gap-2">
               <div className="text-sm font-mono text-white break-all flex-1">
-<<<<<<< Updated upstream
                 {data.address || 'N/A'}
-=======
-                {data.address}
->>>>>>> Stashed changes
               </div>
               <Button
                 variant="ghost"
@@ -230,11 +178,7 @@ export function AOComputeInfoCard() {
           {/* Timestamp */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-<<<<<<< Updated upstream
               <Clock className="h-4 w-4 icon-info" />
-=======
-              <Clock className="h-4 w-4 text-blue-400" />
->>>>>>> Stashed changes
               <Badge variant="outline" className="text-xs">
                 Last Activity
               </Badge>

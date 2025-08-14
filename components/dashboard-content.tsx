@@ -6,16 +6,10 @@ import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button' // Import Button for quick actions
 import { Cpu, HardDrive, MemoryStick, Activity, Server, Database, TrendingUp, AlertTriangle, BarChart3, Network, Globe, Zap, Layers, GitBranch, Timer, CheckCircle2 } from 'lucide-react'
-<<<<<<< Updated upstream
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import dynamic from 'next/dynamic'
 import { Layout, Data } from 'plotly.js';
 import { notifyRestart, notifyStopAll, notifyStartAll, notifyBackup, notifyUpdate, notifyError } from '@/lib/add-notification'
-=======
-import dynamic from 'next/dynamic'
-import { Layout, Data } from 'plotly.js';
-import { notifyRestart, notifyBackup, notifyUpdate, notifyError } from '@/lib/add-notification'
->>>>>>> Stashed changes
 
 // Dynamically import Plotly to avoid SSR issues
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false })
@@ -56,7 +50,6 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
   const [prometheusMetrics, setPrometheusMetrics] = useState<PrometheusMetrics | null>(null)
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
   const [actionResults, setActionResults] = useState<Record<string, { success: boolean, message: string }>>({})
-<<<<<<< Updated upstream
   
   // Calculate whether we should show "Start All" or "Stop All" based on service states
   // Exclude the admin dashboard from this calculation since it's always running
@@ -66,8 +59,6 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
   const stoppedNonAdminServices = nonAdminServices.filter(s => s.status === 'stopped').length
   const shouldShowStartAll = runningNonAdminServices === 0 && stoppedNonAdminServices > 0
   
-=======
->>>>>>> Stashed changes
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -156,13 +147,10 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
         // Send notification based on action type
         if (actionType === 'restart-all') {
           await notifyRestart()
-<<<<<<< Updated upstream
         } else if (actionType === 'stop-all') {
           await notifyStopAll(data.details || data.message || 'All containers stopped')
         } else if (actionType === 'start-all') {
           await notifyStartAll(data)
-=======
->>>>>>> Stashed changes
         } else if (actionType === 'backup-config') {
           await notifyBackup(data.details)
         } else if (actionType === 'update-node') {
@@ -172,18 +160,13 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
         // Set success result with detailed message
         let successMessage = data.message || `${actionType} completed successfully`
         if (data.details && actionType === 'backup-config') {
-<<<<<<< Updated upstream
           successMessage += ` (${data.details.filesBackedUp} files, ${data.details.fileSize}) - saved to ${data.details.backupPath}`
-=======
-          successMessage += ` (${data.details.filesBackedUp} files, ${data.details.fileSize})`
->>>>>>> Stashed changes
         } else if (data.details && actionType === 'update-node') {
           if (data.details.imagesUpdated === false) {
             successMessage = 'AR.IO Node is already up to date. No updates needed.'
           } else {
             successMessage += ` (${data.details.servicesRunning}/${data.details.totalServices} services)`
           }
-<<<<<<< Updated upstream
         } else if (actionType === 'stop-all') {
           if (data.stopped > 0) {
             successMessage = `Successfully stopped ${data.stopped} container${data.stopped !== 1 ? 's' : ''}`
@@ -202,8 +185,6 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
           } else {
             successMessage = 'No containers were stopped to start'
           }
-=======
->>>>>>> Stashed changes
         }
         
         setActionResults(prev => ({ 
@@ -337,17 +318,10 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
         <Card className="dashboard-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-white">
-<<<<<<< Updated upstream
               <BarChart3 className="h-5 w-5 icon-primary" />
               AR.IO Gateway Metrics
               {prometheusMetrics && !prometheusMetrics.available && (
                 <AlertTriangle className="h-4 w-4 icon-error ml-2" />
-=======
-              <BarChart3 className="h-5 w-5 text-white" />
-              AR.IO Gateway Metrics
-              {prometheusMetrics && !prometheusMetrics.available && (
-                <AlertTriangle className="h-4 w-4 text-red-400 ml-2" />
->>>>>>> Stashed changes
               )}
             </CardTitle>
             <CardDescription className="text-gray-300">
@@ -368,11 +342,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                       </CardHeader>
                       <CardContent className="flex items-center justify-center h-40">
                         <div className="text-center">
-<<<<<<< Updated upstream
                           <div className="text-6xl font-bold text-white mb-2">
-=======
-                          <div className="text-6xl font-bold text-green-400 mb-2">
->>>>>>> Stashed changes
                             {prometheusMetrics.metrics.ario.find((m: any) => m.name === 'last_height_imported')?.value.toLocaleString()}
                           </div>
                         </div>
@@ -776,11 +746,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                 </div>
               ) : (
                 <div className="text-center py-8">
-<<<<<<< Updated upstream
                   <AlertTriangle className="h-12 w-12 icon-error mx-auto mb-4" />
-=======
-                  <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
->>>>>>> Stashed changes
                   <h3 className="text-lg font-medium text-white mb-2">Prometheus Unavailable</h3>
                   <p className="text-gray-400 mb-2">
                     {prometheusMetrics?.error === 'Network error' 
@@ -877,7 +843,6 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
             </Button>
             <Button 
               className="p-4 text-left bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700 hover:border-white h-auto flex-col items-start"
-<<<<<<< Updated upstream
               onClick={() => handleQuickAction(shouldShowStartAll ? 'start-all' : 'stop-all')}
               disabled={actionLoading['stop-all'] || actionLoading['start-all']}
             >
@@ -889,13 +854,6 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                  actionLoading['start-all'] ? 'Starting...' : 
                  shouldShowStartAll ? 'Start all stopped containers' : 'Stop all running containers'}
               </div>
-=======
-              onClick={() => handleQuickAction('view-logs')}
-              disabled={actionLoading['view-logs']}
-            >
-              <div className="font-medium text-white">View System Logs</div>
-              <div className="text-sm text-gray-400">{actionLoading['view-logs'] ? 'Loading logs...' : 'Check system-wide logs'}</div>
->>>>>>> Stashed changes
             </Button>
             <Button 
               className="p-4 text-left bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700 hover:border-white h-auto flex-col items-start"
@@ -924,7 +882,6 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                 key={action}
                 className={`mt-4 p-3 rounded-lg border flex items-center gap-2 ${
                   result.success 
-<<<<<<< Updated upstream
                     ? 'bg-gray-800 border-gray-600 text-white' 
                     : 'bg-gray-900 border-gray-700 text-gray-300'
                 }`}
@@ -933,16 +890,6 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                   <CheckCircle2 className="h-4 w-4 icon-success" />
                 ) : (
                   <AlertTriangle className="h-4 w-4 icon-error" />
-=======
-                    ? 'bg-green-900/20 border-green-700 text-green-300' 
-                    : 'bg-red-900/20 border-red-700 text-red-300'
-                }`}
-              >
-                {result.success ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-400" />
-                ) : (
-                  <AlertTriangle className="h-4 w-4 text-red-400" />
->>>>>>> Stashed changes
                 )}
                 <span className="text-sm">{result.message}</span>
               </div>

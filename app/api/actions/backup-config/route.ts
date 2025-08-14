@@ -6,10 +6,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { join } from 'path'
 import { existsSync, mkdirSync } from 'fs'
 import { access, constants } from 'fs/promises'
-<<<<<<< Updated upstream
 import { homedir } from 'os'
-=======
->>>>>>> Stashed changes
 
 const execAsync = promisify(exec)
 
@@ -28,11 +25,7 @@ export async function POST() {
   }
 
   try {
-<<<<<<< Updated upstream
     const arIoNodePath = expandPath(process.env.AR_IO_NODE_PATH || '~/ar-io-node')
-=======
-    const arIoNodePath = process.env.AR_IO_NODE_PATH || '/tmp/ar-io-node'
->>>>>>> Stashed changes
     const timestamp = new Date().toISOString().replace(/[:.-]/g, '_')
     const backupFileName = `config_backup_${timestamp}.tar.gz`
     
