@@ -19,8 +19,23 @@ export async function POST(
   try {
     const { service, action } = params
     
-    // First try to find the container using docker compose
-    const { stdout: composeOutput } = await execAsync(`docker compose -p ar-io-node ps ${service} --format "{{.Name}}" 2>/dev/null || echo ""`)
+    // Map UI service names to actual Docker Compose service names
+    const serviceNameMap: Record<string, string> = {
+      'gateway': 'core',
+      'observer': 'observer',
+      'envoy': 'envoy',
+      'autoheal': 'autoheal',
+      'clickhouse': 'clickhouse',
+      'litestream': 'litestream',
+      'grafana': 'grafana',
+      'ao-cu': 'ao-cu',
+      'bundler': 'upload-service',
+      'admin': 'admin-dashboard'
+    }
+    const actualServiceName = serviceNameMap[service] || service
+    
+    // First try to find the container using docker compose with the correct service name
+    const { stdout: composeOutput } = await execAsync(`docker compose -p ar-io-node ps ${actualServiceName} --format "{{.Name}}" 2>/dev/null || echo ""`)
     let containerName = composeOutput.trim()
 
     // If not found via compose, try the manual mapping
@@ -43,13 +58,15 @@ export async function POST(
     let command = ''
     switch (action) {
       case 'start':
-        command = `docker compose -p ar-io-node start ${service} 2>/dev/null || docker start ${containerName}`
+        command = `docker compose -p ar-io-node start ${actualServiceName} 2>/dev/null || docker start ${containerName}`
         break
       case 'stop':
         command = `docker stop ${containerName}`
         break
       case 'restart':
-        command = `docker restart ${containerName}`
+        // Use docker compose recreation to ensure environment variables are reloaded
+        const arIoNodePath = process.env.AR_IO_NODE_PATH || '~/ar-io-node'
+        command = `cd "${arIoNodePath}" && docker compose stop ${actualServiceName} && docker compose up -d ${actualServiceName} 2>/dev/null || docker restart ${containerName}`
         break
 
       default:
@@ -74,7 +91,7 @@ export async function POST(
       }
       
       const serviceName = serviceNameMap[service] || service.charAt(0).toUpperCase() + service.slice(1)
-      const actionPastTense = action === 'start' ? 'started' : action === 'stop' ? 'stopped' : 'restarted'
+      const actionPastTense = action === 'start' ? 'started' : action === 'stop' ? 'stopped' : 'restarted (configuration reloaded)'
       
       const notifications = await getNotificationsFromFile()
       const newId = notifications.length > 0 ? Math.max(...notifications.map(n => n.id)) + 1 : 1

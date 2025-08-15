@@ -115,6 +115,7 @@ export function VisualFiltersBuilder({ service }: VisualFiltersBuilderProps) {
                            key === 'webhookBlockFilter' ? 'WEBHOOK_BLOCK_FILTER' : key
 
           if (newFilterSets[filterKey]) {
+            // Handle both empty and populated filter objects
             newFilterSets[filterKey].rules = parseFilterToRules(value as any)
           }
         })

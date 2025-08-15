@@ -14,43 +14,27 @@ export async function POST() {
   }
 
   try {
-    // Get all running container names for the ar-io-node project
-    const { stdout: containerNamesOutput } = await execAsync(`docker compose -p ar-io-node ps -q 2>/dev/null || docker ps -a --filter "label=com.docker.compose.project=ar-io-node" --format "{{.Names}}" 2>/dev/null || echo ""`)
-    const containerNames = containerNamesOutput.trim().split('\n').filter(Boolean)
-
-    if (containerNames.length === 0) {
-      return NextResponse.json({ success: true, message: 'No AR.IO containers found to restart.' })
-    }
-
-    // Restart each container
-    const restartPromises = containerNames.map(name => 
-      execAsync(`docker restart ${name} 2>/dev/null`)
-    )
-
-    const results = await Promise.allSettled(restartPromises) // Use allSettled to ensure all promises run even if some fail
+    // Use docker compose down and up to ensure environment variables are reloaded
+    // This is more effective than individual container restarts for configuration changes
+    console.log('Performing complete AR.IO stack recreation to reload configuration...')
     
-    // Count successful and failed restarts
-    const successCount = results.filter(result => result.status === 'fulfilled').length
-    const failCount = results.filter(result => result.status === 'rejected').length
+    const arIoNodePath = process.env.AR_IO_NODE_PATH || '~/ar-io-node'
+    const command = `cd "${arIoNodePath}" && docker compose down && docker compose up -d`
+    const { stdout } = await execAsync(command)
+    
+    // Get the list of services that should be running to count them
+    const { stdout: servicesOutput } = await execAsync(`cd "${arIoNodePath}" && docker compose config --services 2>/dev/null || echo ""`)
+    const services = servicesOutput.trim().split('\n').filter(Boolean)
+    const successCount = services.length
+    const failCount = 0 // If we reach here, the command succeeded
     
     // Add notification
     try {
       const notifications = await getNotificationsFromFile()
       const newId = notifications.length > 0 ? Math.max(...notifications.map(n => n.id)) + 1 : 1
       
-      let message: string
-      let type: 'success' | 'warning' | 'error'
-      
-      if (failCount === 0) {
-        message = `All ${successCount} AR.IO services restarted successfully`
-        type = 'success'
-      } else if (successCount > 0) {
-        message = `${successCount} services restarted successfully, ${failCount} failed`
-        type = 'warning'
-      } else {
-        message = `Failed to restart all ${failCount} services`
-        type = 'error'
-      }
+      const message = `All ${successCount} AR.IO services recreated successfully (configuration reloaded)`
+      const type = 'success'
       
       const newNotification = {
         id: newId,
@@ -66,9 +50,40 @@ export async function POST() {
       console.error('Failed to add restart-all notification:', notificationError)
     }
 
-    return NextResponse.json({ success: true, message: 'Attempted to restart all AR.IO containers.' })
+    return NextResponse.json({ 
+      success: true, 
+      message: 'AR.IO stack recreated successfully. All configuration changes have been reloaded.',
+      restarted: successCount,
+      failed: failCount,
+      total: successCount,
+      details: {
+        successCount,
+        failCount,
+        totalContainers: successCount,
+        output: stdout
+      }
+    })
   } catch (error) {
-    console.error('Error restarting all containers:', error)
-    return NextResponse.json({ error: 'Failed to restart all containers' }, { status: 500 })
+    console.error('Error recreating AR.IO stack:', error)
+    
+    // Add error notification
+    try {
+      const notifications = await getNotificationsFromFile()
+      const newId = notifications.length > 0 ? Math.max(...notifications.map(n => n.id)) + 1 : 1
+      const newNotification = {
+        id: newId,
+        message: `Failed to recreate AR.IO stack: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        type: 'error' as const,
+        time: new Date().toLocaleString(),
+        read: false
+      }
+      
+      notifications.unshift(newNotification)
+      await saveNotificationsToFile(notifications)
+    } catch (notificationError) {
+      console.error('Failed to add error notification:', notificationError)
+    }
+    
+    return NextResponse.json({ error: 'Failed to recreate AR.IO stack' }, { status: 500 })
   }
 }

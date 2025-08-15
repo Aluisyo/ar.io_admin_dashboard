@@ -36,10 +36,10 @@ export async function readEnvFile(filePath: string): Promise<Record<string, stri
 /**
  * Updates specific keys in a .env file. If a key does not exist, it will be added.
  * @param filePath The full path to the .env file.
- * @param updates A Record<string, string> of keys and their new values.
+ * @param updates A Record<string, string | { value: string, addQuotes?: boolean }> of keys and their new values.
  * @returns A Promise that resolves when the file is updated.
  */
-export async function updateEnvFile(filePath: string, updates: Record<string, string>): Promise<void> {
+export async function updateEnvFile(filePath: string, updates: Record<string, string | { value: string, addQuotes?: boolean }>): Promise<void> {
   let lines: string[] = [];
   let existingEnv: Record<string, string> = {};
 
@@ -68,6 +68,21 @@ export async function updateEnvFile(filePath: string, updates: Record<string, st
   const newLines: string[] = [];
   const updatedKeys = new Set<string>();
 
+  // Helper function to format the value based on type
+  const formatValue = (key: string, update: string | { value: string, addQuotes?: boolean }): string => {
+    if (typeof update === 'string') {
+      // For filter configurations (JSON), don't add quotes
+      if (key.includes('_FILTER') && (update.startsWith('{') || update.startsWith('['))) {
+        return update;
+      }
+      // For other values, add quotes
+      return `"${update}"`;
+    } else {
+      // Use the addQuotes flag to determine whether to add quotes
+      return update.addQuotes !== false ? `"${update.value}"` : update.value;
+    }
+  };
+
   // Iterate over existing lines, updating if a key matches
   for (const line of lines) {
     const trimmedLine = line.trim();
@@ -76,7 +91,8 @@ export async function updateEnvFile(filePath: string, updates: Record<string, st
       const trimmedKey = key.trim();
       if (updates.hasOwnProperty(trimmedKey)) {
         // Update existing key
-        newLines.push(`${trimmedKey}="${updates[trimmedKey]}"`);
+        const formattedValue = formatValue(trimmedKey, updates[trimmedKey]);
+        newLines.push(`${trimmedKey}=${formattedValue}`);
         updatedKeys.add(trimmedKey);
       } else {
         // Keep original line
@@ -91,7 +107,8 @@ export async function updateEnvFile(filePath: string, updates: Record<string, st
   // Add new keys that were not present
   for (const key in updates) {
     if (!updatedKeys.has(key)) {
-      newLines.push(`${key}="${updates[key]}"`);
+      const formattedValue = formatValue(key, updates[key]);
+      newLines.push(`${key}=${formattedValue}`);
     }
   }
 

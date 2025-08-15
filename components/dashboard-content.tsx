@@ -185,6 +185,15 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
           } else {
             successMessage = 'No containers were stopped to start'
           }
+        } else if (actionType === 'restart-all') {
+          if (data.restarted > 0) {
+            successMessage = `Successfully restarted ${data.restarted} container${data.restarted !== 1 ? 's' : ''}`
+            if (data.failed > 0) {
+              successMessage += ` (${data.failed} failed to restart)`
+            }
+          } else {
+            successMessage = 'No containers were found to restart'
+          }
         }
         
         setActionResults(prev => ({ 
@@ -195,9 +204,14 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
         // Show success message for a few seconds, then clear
         setTimeout(() => {
           setActionResults(prev => ({ ...prev, [actionType]: { success: false, message: '' } }))
-          // For restart actions, refresh after showing success
+          // For restart actions, manually refresh data instead of full page reload
           if (actionType === 'restart-all') {
-            window.location.reload()
+            // Refresh data after containers have had time to start
+            setTimeout(() => {
+              fetchStats()
+              fetchServices()
+              fetchPrometheusMetrics()
+            }, 3000)
           }
         }, 5000)
       } else {

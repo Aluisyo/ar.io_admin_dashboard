@@ -65,7 +65,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { ANS104_UNBUNDLE_FILTER, ANS104_INDEX_FILTER, WEBHOOK_INDEX_FILTER, WEBHOOK_BLOCK_FILTER } = await request.json();
+    const requestData = await request.json();
+    console.log('POST /api/filters - Received data:', JSON.stringify(requestData, null, 2));
+    
+    const { ANS104_UNBUNDLE_FILTER, ANS104_INDEX_FILTER, WEBHOOK_INDEX_FILTER, WEBHOOK_BLOCK_FILTER } = requestData;
 
     // Stringify the JSON objects for storage in .env
     const updates: Record<string, string> = {};
@@ -75,6 +78,9 @@ export async function POST(request: NextRequest) {
     updates.ANS104_INDEX_FILTER = JSON.stringify(ANS104_INDEX_FILTER || {});
     updates.WEBHOOK_INDEX_FILTER = JSON.stringify(WEBHOOK_INDEX_FILTER || {});
     updates.WEBHOOK_BLOCK_FILTER = JSON.stringify(WEBHOOK_BLOCK_FILTER || {});
+    
+    console.log('POST /api/filters - Updates to write to .env:', updates);
+    console.log('POST /api/filters - Writing to path:', ENV_FILE_PATH);
 
     await updateEnvFile(ENV_FILE_PATH, updates);
 

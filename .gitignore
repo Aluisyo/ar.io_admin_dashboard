@@ -137,3 +137,5 @@ grafana/
 .cache/
 .eslintcache
 .stylelintcache
+
+WARP.md
