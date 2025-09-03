@@ -1,65 +1,40 @@
 # NGINX Setup for AR.IO Admin Dashboard
 
-This guide shows how to configure NGINX to provide external access to the AR.IO Admin Dashboard.
+Simple guide to serve the admin dashboard at `/admin` path.
 
-## Prerequisites
-
-- AR.IO Gateway running with NGINX configured
-- Admin Dashboard deployed via Docker Compose on port 3001
-- SSL certificate (Let's Encrypt recommended)
-
-## Deploy the Admin Dashboard
-
-First, ensure your Admin Dashboard is running:
+## Step 1: Build and Run Dashboard
 
 ```bash
-cd ~/ar-io-node
-docker compose -f docker-compose.dashboard.yaml up -d
+cd ~/ar.io_admin_dashboard
+
+# Build with base path
+export NEXT_PUBLIC_BASE_PATH="/admin"
+npm run build
+
+# Copy required files
+cp -r public .next/standalone/
+cp -r .next/static .next/standalone/.next/
+
+# Start the server
+NEXT_PUBLIC_BASE_PATH="/admin" \
+NEXTAUTH_URL="https://yourdomain.com/admin" \
+PORT=3001 \
+node .next/standalone/server.js
 ```
 
-The dashboard will be accessible locally at `http://localhost:3001`.
+## Step 2: Configure NGINX
 
-## Configure NGINX
-
-### Option 1: Path-based Setup (Recommended)
-
-Configure the dashboard to run under `/admin` path by updating your `.env.dashboard` file:
-
-```bash
-# Set base path for reverse proxy deployment
-NEXT_PUBLIC_BASE_PATH=/admin
-NEXTAUTH_URL=https://<domain>/admin
-```
-
-Restart the dashboard:
-```bash
-docker compose -f docker-compose.dashboard.yaml down
-docker compose -f docker-compose.dashboard.yaml up -d
-```
-
-Add to your existing NGINX server block:
+Add this to your NGINX config:
 
 ```nginx
-# force redirects http to https
-server {
-    listen 80;
-    listen [::]:80;
-    server_name <domain> *.<domain>;
-
-    location / {
-        return 301 https://$host$request_uri;
-    }
-}
-
-# forwards traffic into your node and provides ssl certificates
 server {
     listen 443 ssl;
-    listen [::]:443 ssl;
-    server_name <domain> *.<domain>;
+    server_name yourdomain.com;
 
-    ssl_certificate /etc/letsencrypt/live/<domain>/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/<domain>/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
 
+    # Main gateway
     location / {
         proxy_pass http://localhost:3000;
         proxy_set_header Host $host;
@@ -68,106 +43,38 @@ server {
         proxy_http_version 1.1;
     }
 
-    location /admin/ {
-        proxy_pass http://localhost:3001/admin/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_http_version 1.1;
-    }
-}
-```
-
-### Option 2: Subdomain Setup
-
-For a dedicated subdomain like `admin.<domain>`:
-
-```nginx
-# force redirects http to https
-server {
-    listen 80;
-    listen [::]:80;
-    server_name <domain> *.<domain> admin.<domain>;
-
-    location / {
-        return 301 https://$host$request_uri;
-    }
-}
-
-# Main gateway server
-server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    server_name <domain> *.<domain>;
-
-    ssl_certificate /etc/letsencrypt/live/<domain>/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/<domain>/privkey.pem;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_http_version 1.1;
-    }
-}
-
-# Admin dashboard on subdomain
-server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    server_name admin.<domain>;
-
-    ssl_certificate /etc/letsencrypt/live/<domain>/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/<domain>/privkey.pem;
-
-    location / {
+    # Admin dashboard at /admin
+    location ^~ /admin {
         proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_http_version 1.1;
+        proxy_cache_bypass $http_upgrade;
     }
 }
 ```
 
-## Test the Configuration
+## Step 3: Test and Reload
 
 ```bash
-# Test NGINX configuration
+# Test nginx config
 sudo nginx -t
 
-# Reload NGINX
+# Reload nginx
 sudo systemctl reload nginx
-
-# Check dashboard logs
-docker compose -f docker-compose.dashboard.yaml logs -f --tail=25
 ```
 
-## Access the Dashboard
+## Access Dashboard
 
-- **Path-based**: `https://<domain>/admin`
-- **Subdomain**: `https://admin.<domain>`
+Visit: `https://yourdomain.com/admin`
 
-Log in with the credentials configured in your `.env.dashboard` file (`ADMIN_USERNAME` and `ADMIN_PASSWORD`).
+## Important Notes
 
-## Troubleshooting
-
-If you encounter issues:
-
-1. Check that the dashboard container is running:
-   ```bash
-   docker ps | grep admin-dashboard
-   ```
-
-2. Verify the dashboard is responding on port 3001:
-   ```bash
-   curl http://localhost:3001
-   ```
-
-3. Check NGINX error logs:
-   ```bash
-   sudo tail -f /var/log/nginx/error.log
-   ```
+- Use `location ^~ /admin` (no trailing slash)
+- Use `proxy_pass http://localhost:3001` (no /admin suffix)
+- Must include WebSocket headers (Upgrade, Connection)
+- App must be built and run with `NEXT_PUBLIC_BASE_PATH="/admin"`
