@@ -27,6 +27,7 @@ import { RotateCcw } from 'lucide-react'
 import { Power } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
+import { apiGet, apiPost, getApiUrl } from '@/lib/api-utils'
 
 interface DockerInfo { status: string }
 
@@ -38,38 +39,74 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
   const [activeTab, setActiveTab] = useState('overview')
   const [dockerInfo, setDockerInfo] = useState<DockerInfo | null>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [isLoadingInfo, setIsLoadingInfo] = useState(false);
   const { toast } = useToast();
-
-  const fetchDockerInfo = async () => {
-    try {
-      const response = await fetch('/api/docker/' + service + '/info');
-      if (response.ok) {
-        const data = await response.json();
-        setDockerInfo({ status: data.status });
-      }
-    } catch (error) {
-      console.error('Failed to fetch docker info:', error);
-    }
-  };
-
-  useEffect(() => {
-    fetchDockerInfo();
-  }, [service]);
 
   // Reset to overview tab when switching services
   useEffect(() => {
     setActiveTab('overview');
   }, [service]);
 
+  // Fetch docker info with race condition protection
+  useEffect(() => {
+    const controller = new AbortController();
+    setIsLoadingInfo(true);
+
+    const fetchDockerInfo = async () => {
+      try {
+        const response = await fetch(getApiUrl(`/api/docker/${service}/info`), {
+          signal: controller.signal
+        });
+        
+        if (controller.signal.aborted) return;
+        
+        if (response.ok) {
+          const data = await response.json();
+          setDockerInfo({ status: data.status });
+        } else {
+          console.error('Failed to fetch docker info: HTTP', response.status);
+        }
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.error('Failed to fetch docker info:', error);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoadingInfo(false);
+        }
+      }
+    };
+
+    fetchDockerInfo();
+
+    // Cleanup function to abort request if component unmounts or service changes
+    return () => {
+      controller.abort();
+    };
+  }, [service]);
+
   const handleAction = async (action: string) => {
     setLoadingAction(action);
     const actionName = action.charAt(0).toUpperCase() + action.slice(1);
     toast({ title: `${actionName}ing ${getServiceName(service)} service...` });
+    
     try {
-      const response = await fetch(`/api/docker/${service}/${action}`, { method: 'POST' });
+      const response = await apiPost(`/api/docker/${service}/${action}`);
       if (response.ok) {
         toast({ title: `${actionName} successful`, description: `${getServiceName(service)} service ${actionName.toLowerCase()}ed successfully.` });
-        await fetchDockerInfo();
+        
+        // Refresh docker info after successful action
+        setTimeout(async () => {
+          try {
+            const infoResponse = await fetch(getApiUrl(`/api/docker/${service}/info`));
+            if (infoResponse.ok) {
+              const data = await infoResponse.json();
+              setDockerInfo({ status: data.status });
+            }
+          } catch (error) {
+            console.error('Failed to refresh docker info after action:', error);
+          }
+        }, 1000); // Small delay to allow container state to update
       } else {
         toast({ title: `${actionName} failed`, description: `Failed to ${action} service`, variant: 'destructive' });
       }
@@ -131,22 +168,31 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-           {dockerInfo?.status === 'stopped' && (
-             <Button onClick={() => handleAction('start')} variant="default" className="bg-white text-black hover:bg-gray-200" disabled={loadingAction === 'start'}>
-               <Play className="h-4 w-4 mr-2" />
-               {loadingAction === 'start' ? 'Starting...' : 'Start'}
-             </Button>
-           )}
-           {dockerInfo?.status === 'running' && (
+           {isLoadingInfo ? (
+             <div className="flex items-center text-gray-400 text-sm">
+               <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+               Loading service status...
+             </div>
+           ) : (
              <>
-               <Button onClick={() => handleAction('restart')} variant="default" disabled={loadingAction === 'restart'}>
-                 <RotateCcw className="h-4 w-4 mr-2" />
-                 {loadingAction === 'restart' ? 'Restarting...' : 'Restart'}
-               </Button>
-               <Button onClick={() => handleAction('stop')} variant="destructive" disabled={loadingAction === 'stop'}>
-                 <Square className="h-4 w-4 mr-2" />
-                 {loadingAction === 'stop' ? 'Stopping...' : 'Stop'}
-               </Button>
+               {dockerInfo?.status === 'stopped' && (
+                 <Button onClick={() => handleAction('start')} variant="default" className="bg-white text-black hover:bg-gray-200" disabled={loadingAction === 'start'}>
+                   <Play className="h-4 w-4 mr-2" />
+                   {loadingAction === 'start' ? 'Starting...' : 'Start'}
+                 </Button>
+               )}
+               {dockerInfo?.status === 'running' && (
+                 <>
+                   <Button onClick={() => handleAction('restart')} variant="default" disabled={loadingAction === 'restart'}>
+                     <RotateCcw className="h-4 w-4 mr-2" />
+                     {loadingAction === 'restart' ? 'Restarting...' : 'Restart'}
+                   </Button>
+                   <Button onClick={() => handleAction('stop')} variant="destructive" disabled={loadingAction === 'stop'}>
+                     <Square className="h-4 w-4 mr-2" />
+                     {loadingAction === 'stop' ? 'Stopping...' : 'Stop'}
+                   </Button>
+                 </>
+               )}
              </>
            )}
         </div>
@@ -223,42 +269,42 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
           )}
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-4">
+        <TabsContent value="overview" className="space-y-4" key={`overview-${service}`}>
           <OverviewTab service={service} />
         </TabsContent>
 
-        <TabsContent value="metrics" className="space-y-4">
+        <TabsContent value="metrics" className="space-y-4" key={`metrics-${service}`}>
           <MetricsTab service={service} />
         </TabsContent>
 
-        <TabsContent value="configuration" className="space-y-4">
+        <TabsContent value="configuration" className="space-y-4" key={`configuration-${service}`}>
           <ConfigurationTab service={service} />
         </TabsContent>
 
-        <TabsContent value="logs" className="space-y-4">
+        <TabsContent value="logs" className="space-y-4" key={`logs-${service}`}>
           <LogsTab service={service} />
         </TabsContent>
 
         {service === 'gateway' && (
           <>
-            <TabsContent value="admin-endpoint" className="space-y-4">
+            <TabsContent value="admin-endpoint" className="space-y-4" key={`admin-endpoint-${service}`}>
               <AdminEndpointTab service={service} />
             </TabsContent>
 
-            <TabsContent value="index-filters" className="space-y-4">
+            <TabsContent value="index-filters" className="space-y-4" key={`index-filters-${service}`}>
               <IndexingAndWebhookFiltersTab service={service} />
             </TabsContent>
           </>
         )}
 
         {service === 'bundler' && (
-          <TabsContent value="bundler-filters" className="space-y-4">
+          <TabsContent value="bundler-filters" className="space-y-4" key={`bundler-filters-${service}`}>
             <BundlerFiltersTab service={service} />
           </TabsContent>
         )}
 
         {(service === 'gateway' || service === 'clickhouse') && (
-          <TabsContent value="database-query" className="space-y-4">
+          <TabsContent value="database-query" className="space-y-4" key={`database-query-${service}`}>
             <DatabaseQueryTab service={service} />
           </TabsContent>
         )}

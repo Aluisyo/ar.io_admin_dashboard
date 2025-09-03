@@ -14,21 +14,17 @@ export async function POST() {
   }
 
   try {
-    // Use docker compose down and up to ensure environment variables are reloaded
-    // This is more effective than individual container restarts for configuration changes
     console.log('Performing complete AR.IO stack recreation to reload configuration...')
     
     const arIoNodePath = process.env.AR_IO_NODE_PATH || '~/ar-io-node'
     const command = `cd "${arIoNodePath}" && docker compose down && docker compose up -d`
     const { stdout } = await execAsync(command)
     
-    // Get the list of services that should be running to count them
     const { stdout: servicesOutput } = await execAsync(`cd "${arIoNodePath}" && docker compose config --services 2>/dev/null || echo ""`)
     const services = servicesOutput.trim().split('\n').filter(Boolean)
     const successCount = services.length
-    const failCount = 0 // If we reach here, the command succeeded
+    const failCount = 0
     
-    // Add notification
     try {
       const notifications = await getNotificationsFromFile()
       const newId = notifications.length > 0 ? Math.max(...notifications.map(n => n.id)) + 1 : 1

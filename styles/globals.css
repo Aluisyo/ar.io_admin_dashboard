@@ -6,6 +6,21 @@
   .text-balance {
     text-wrap: balance;
   }
+  
+  /* Text clamp utilities for preventing overflow */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 }
 
 @layer base {
@@ -86,5 +101,35 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Custom animation delays for Quick Actions */
+@layer utilities {
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
+  
+  /* Enhanced hover effects */
+  .quick-action-card {
+    @apply transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl;
+  }
+  
+  /* Plotly chart stability */
+  .js-plotly-plot {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+  
+  .js-plotly-plot .plotly {
+    backface-visibility: hidden;
+  }
+  
+  /* Prevent chart reflow */
+  .plotly-chart-container {
+    contain: layout style;
   }
 }

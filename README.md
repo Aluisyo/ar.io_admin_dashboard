@@ -66,26 +66,57 @@ npm run start
 ### Build & Run Locally
 
 ```bash
-docker-compose up --build
+docker compose -f docker-compose.dashboard.yaml up --build
 ```
 
 This uses:
-- Host port `3001` → container port `3001`
+- Host port `3001` → container port `3001` (configurable via `DASHBOARD_PORT`)
 - `.env.dashboard` for environment variables
 - Mounts Docker socket (`/var/run/docker.sock`) to control other containers
 - Attaches to the external `ar-io-network`
+- Configurable volume paths for AR.IO node and backups
 
 ### Pull & Run Official Image
 
+**Option 1: Using docker compose (Recommended)**
 ```bash
-docker-compose pull
-docker-compose up
-```
-or
+# Set environment variables (optional, defaults will be used)
+export AR_IO_NODE_PATH="$HOME/ar-io-node"
+export AR_IO_BACKUPS_PATH="$HOME/ar-io-backups"
+export DASHBOARD_PORT="3001"
 
-```bash
-docker run -d --name ar-io-admin-dashboard --network ar-io-network -p 3001:3001 -v /var/run/docker.sock:/var/run/docker.sock -v ~/ar-io-node:~/ar-io-node aluisyo/ar.io_admin_dashboard:latest
+# Deploy the admin dashboard
+docker compose -f docker-compose.dashboard.yaml pull
+docker compose -f docker-compose.dashboard.yaml up -d
 ```
+
+**Option 2: Direct docker run**
+```bash
+docker run -d \
+  --name ar-io-admin-dashboard \
+  --network ar-io-network \
+  -p 3001:3001 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v ~/ar-io-node:/home/node/ar-io-node \
+  -v ~/ar-io-backups:/home/node/ar-io-backups \
+  -v ./.env.dashboard:/app/.env.dashboard \
+  -e HOME=/home/node \
+  -e AR_IO_NODE_PATH=/home/node/ar-io-node \
+  -e DOCKER_HOST=unix:///var/run/docker.sock \
+  aluisyo/ar.io_admin_dashboard:latest
+```
+
+### Docker Compatibility Features
+
+✅ **Full AR.IO Gateway Update Support**: The containerized dashboard can update AR.IO Gateway instances running on the same Docker host
+
+✅ **Smart Network Detection**: Automatically tries multiple network endpoints to connect to AR.IO Gateway services
+
+✅ **Volume Path Mapping**: Properly maps host AR.IO node directory into container for Git operations
+
+✅ **Docker Socket Access**: Container can control other Docker containers via mounted Docker socket
+
+✅ **Environment Flexibility**: Supports configurable paths and ports via environment variables
 
 ## License
 

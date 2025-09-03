@@ -5,7 +5,6 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { readEnvFile, updateEnvFile } from '@/lib/env-utils' // Import env-utils
 import { homedir } from 'os'
 
-// Helper function to expand tilde to home directory
 function expandPath(path: string): string {
   if (path.startsWith('~/') || path === '~') {
     return path.replace(/^~(?=$|\/|\\)/, homedir())

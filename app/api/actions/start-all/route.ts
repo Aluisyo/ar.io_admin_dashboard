@@ -45,7 +45,6 @@ export async function POST() {
     const successCount = results.filter(result => result.status === 'fulfilled').length
     const failCount = results.filter(result => result.status === 'rejected').length
     
-    // Add notification
     try {
       const notifications = await getNotificationsFromFile()
       const newId = notifications.length > 0 ? Math.max(...notifications.map(n => n.id)) + 1 : 1

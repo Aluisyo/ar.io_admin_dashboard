@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select' // Import Select components
 import { RefreshCw, Download, Filter, Search, FileText } from 'lucide-react'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { getApiUrl } from '@/lib/api-utils'
 
 interface LogsTabProps {
   service: string
@@ -34,14 +35,18 @@ export function LogsTab({ service }: LogsTabProps) {
   const fetchInitialLogs = async () => {
     setInitialLoading(true);
     try {
-      const url = new URL(`/api/docker/${service}/logs`, window.location.origin);
+      let apiPath = `/api/docker/${service}/logs`;
+      const params = new URLSearchParams();
       if (filterKeyword) {
-        url.searchParams.append('keyword', filterKeyword);
+        params.append('keyword', filterKeyword);
       }
       if (logLevel !== 'all') {
-        url.searchParams.append('level', logLevel);
+        params.append('level', logLevel);
       }
-      const response = await fetch(url.toString());
+      if (params.toString()) {
+        apiPath += `?${params.toString()}`;
+      }
+      const response = await fetch(getApiUrl(apiPath));
       if (response.ok) {
         const data = await response.text();
         setLogs(data);
@@ -64,19 +69,21 @@ export function LogsTab({ service }: LogsTabProps) {
   // Tail new logs (without loading spinner)
   const tailNewLogs = async () => {
     try {
-      const url = new URL(`/api/docker/${service}/logs`, window.location.origin);
-      url.searchParams.append('tail', 'true'); // Indicate we want only new logs
+      let apiPath = `/api/docker/${service}/logs`;
+      const params = new URLSearchParams();
+      params.append('tail', 'true'); // Indicate we want only new logs
       if (lastLogTimestamp) {
-        url.searchParams.append('since', lastLogTimestamp);
+        params.append('since', lastLogTimestamp);
       }
       if (filterKeyword) {
-        url.searchParams.append('keyword', filterKeyword);
+        params.append('keyword', filterKeyword);
       }
       if (logLevel !== 'all') {
-        url.searchParams.append('level', logLevel);
+        params.append('level', logLevel);
       }
+      apiPath += `?${params.toString()}`;
       
-      const response = await fetch(url.toString());
+      const response = await fetch(getApiUrl(apiPath));
       if (response.ok) {
         const newLogs = await response.text();
         if (newLogs && newLogs.trim()) {
@@ -101,14 +108,18 @@ export function LogsTab({ service }: LogsTabProps) {
   const fetchFreshLogs = async () => {
     setInitialLoading(true);
     try {
-      const url = new URL(`/api/docker/${service}/logs`, window.location.origin);
+      let apiPath = `/api/docker/${service}/logs`;
+      const params = new URLSearchParams();
       if (filterKeyword) {
-        url.searchParams.append('keyword', filterKeyword);
+        params.append('keyword', filterKeyword);
       }
       if (logLevel !== 'all') {
-        url.searchParams.append('level', logLevel);
+        params.append('level', logLevel);
       }
-      const response = await fetch(url.toString());
+      if (params.toString()) {
+        apiPath += `?${params.toString()}`;
+      }
+      const response = await fetch(getApiUrl(apiPath));
       if (response.ok) {
         const data = await response.text();
         setLogs(data);
@@ -174,11 +185,10 @@ export function LogsTab({ service }: LogsTabProps) {
   const handleExportAllLogs = async () => {
     setExportingAll(true);
     try {
-      const url = new URL(`/api/docker/${service}/logs`, window.location.origin);
-      url.searchParams.append('exportAll', 'true');
+      const apiPath = `/api/docker/${service}/logs?exportAll=true`;
       // Don't apply filters for full export to get complete logs
       
-      const response = await fetch(url.toString());
+      const response = await fetch(getApiUrl(apiPath));
       if (response.ok) {
         const allLogs = await response.text();
         const blob = new Blob([allLogs], { type: 'text/plain' });

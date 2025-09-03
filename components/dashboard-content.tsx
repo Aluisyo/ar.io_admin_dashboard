@@ -2,16 +2,16 @@
 
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button' // Import Button for quick actions
-import { Cpu, HardDrive, MemoryStick, Activity, Server, Database, TrendingUp, AlertTriangle, BarChart3, Network, Globe, Zap, Layers, GitBranch, Timer, CheckCircle2 } from 'lucide-react'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { Button } from '@/components/ui/button'
+import { Cpu, HardDrive, MemoryStick, Activity, Server, Database, TrendingUp, AlertTriangle, BarChart3, Network, Globe, Zap, Layers, GitBranch, Timer, CheckCircle2, RotateCcw, Power, FolderArchive, Download } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { Layout, Data } from 'plotly.js';
 import { notifyRestart, notifyStopAll, notifyStartAll, notifyBackup, notifyUpdate, notifyError } from '@/lib/add-notification'
+import { apiGet, apiPost } from '@/lib/api-utils'
 
-// Dynamically import Plotly to avoid SSR issues
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false })
 
 interface SystemStats {
@@ -28,7 +28,7 @@ interface ServiceStatus {
   cpu: number
   memory: number
   ports: string[]
-  serviceId: string // Add serviceId to ServiceStatus
+  serviceId: string
 }
 
 interface PrometheusMetrics {
@@ -50,9 +50,49 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
   const [prometheusMetrics, setPrometheusMetrics] = useState<PrometheusMetrics | null>(null)
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
   const [actionResults, setActionResults] = useState<Record<string, { success: boolean, message: string }>>({})
+  const [showPruneOption, setShowPruneOption] = useState(false)
+  const [performPrune, setPerformPrune] = useState(false)
+  const [forceUpdate, setForceUpdate] = useState(false)
+  const [handleChanges, setHandleChanges] = useState<'stash' | 'reset' | 'backup'>('stash')
   
-  // Calculate whether we should show "Start All" or "Stop All" based on service states
-  // Exclude the admin dashboard from this calculation since it's always running
+  // Generate stable chart data only once to prevent jitter
+  const [chartData] = useState(() => {
+    const generateStableChartData = (baseValue: number, points: number = 20, variance: number = 5, seed: number = 0) => {
+      const data = []
+      for (let i = 0; i < points; i++) {
+        const timeOffset = (points - 1 - i) * 60000
+        // Use seed to make data deterministic but varied
+        const noise = (Math.sin((i + seed) * 0.3) + Math.cos((i + seed) * 0.5)) * variance
+        data.push({
+          x: new Date(Date.now() - timeOffset),
+          y: Math.max(0, Math.min(100, baseValue + noise))
+        })
+      }
+      return data
+    }
+    
+    return {
+      memory: generateStableChartData(60, 20, 8, 1),
+      cpu: generateStableChartData(25, 20, 10, 2),
+      arnsResolution: {
+        p50: generateStableChartData(120, 10, 25, 3),
+        p99: generateStableChartData(250, 10, 50, 4)
+      },
+      responseTime: generateStableChartData(200, 10, 40, 5),
+      cacheHitRate: generateStableChartData(85, 10, 8, 6),
+      graphqlRequests: generateStableChartData(15, 10, 5, 7),
+      fsUsage: generateStableChartData(50, 10, 5, 8),
+      ioRead: Array.from({length: 10}, (_, i) => ({
+        x: new Date(Date.now() - (9-i) * 30000),
+        y: 750000 + Math.sin((i + 9) * 0.3) * 200000
+      })),
+      ioWrite: Array.from({length: 10}, (_, i) => ({
+        x: new Date(Date.now() - (9-i) * 30000),
+        y: 550000 + Math.sin((i + 10) * 0.4) * 150000
+      }))
+    }
+  })
+  
   const nonAdminServices = services.filter(s => s.serviceId !== 'admin')
   const runningServices = services.filter(s => s.status === 'running').length
   const runningNonAdminServices = nonAdminServices.filter(s => s.status === 'running').length
@@ -63,7 +103,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/system/stats')
+        const response = await apiGet('/api/system/stats')
         if (response.ok) {
           const data = await response.json()
           setStats(data)
@@ -75,7 +115,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
 
     const fetchServices = async () => {
       try {
-        const response = await fetch('/api/docker/containers')
+        const response = await apiGet('/api/docker/containers')
         if (response.ok) {
           const data = await response.json()
           setServices(data)
@@ -87,7 +127,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
 
     const fetchPrometheusMetrics = async () => {
       try {
-        const response = await fetch('/api/prometheus/metrics')
+        const response = await apiGet('/api/prometheus/metrics')
         if (response.ok) {
           const data = await response.json()
           console.log('Prometheus metrics data:', data)
@@ -117,6 +157,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
     fetchStats()
     fetchServices()
     fetchPrometheusMetrics()
+    
     const interval = setInterval(() => {
       fetchStats()
       fetchServices()
@@ -138,13 +179,17 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
     setActionResults(prev => ({ ...prev, [actionType]: { success: false, message: '' } }))
     
     try {
-      const response = await fetch(`/api/actions/${actionType}`, { method: 'POST' })
+      let requestBody = {}
+      if (actionType === 'update-node') {
+        requestBody = { performPrune, forceUpdate, handleChanges }
+      }
+      
+      const response = await apiPost(`/api/actions/${actionType}`, requestBody)
       const data = await response.json()
       
       if (response.ok) {
         console.log(`${actionType} action successful!`, data)
         
-        // Send notification based on action type
         if (actionType === 'restart-all') {
           await notifyRestart()
         } else if (actionType === 'stop-all') {
@@ -162,10 +207,31 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
         if (data.details && actionType === 'backup-config') {
           successMessage += ` (${data.details.filesBackedUp} files, ${data.details.fileSize}) - saved to ${data.details.backupPath}`
         } else if (data.details && actionType === 'update-node') {
-          if (data.details.imagesUpdated === false) {
+          if (data.details.networkTrafficAvoided === true) {
+            successMessage = 'AR.IO Node is already up to date. No updates needed (bandwidth saved).'
+          } else if (data.details.repositoryUpdated === false && data.details.dockerImagesUpdated === false) {
             successMessage = 'AR.IO Node is already up to date. No updates needed.'
           } else {
-            successMessage += ` (${data.details.servicesRunning}/${data.details.totalServices} services)`
+            const updates = []
+            if (data.details.repositoryUpdated) updates.push('code')
+            if (data.details.dockerImagesUpdated) {
+              if (data.details.dockerImagesBuilt) {
+                updates.push('images (built from source)')
+              } else {
+                updates.push('images (pulled)')
+              }
+            }
+            const updateType = updates.length > 0 ? ` (updated: ${updates.join(', ')})` : ''
+            
+            let customChangesInfo = ''
+            if (data.details.customChangesHandled) {
+              customChangesInfo = ` Custom changes ${data.details.customChangesStrategy}: ${data.details.customChangesResult}`
+              if (data.details.backupBranch) {
+                customChangesInfo += ` Backup: ${data.details.backupBranch}`
+              }
+            }
+            
+            successMessage += `${updateType} (${data.details.servicesRunning}/${data.details.totalServices} services)${customChangesInfo}`
           }
         } else if (actionType === 'stop-all') {
           if (data.stopped > 0) {
@@ -253,6 +319,339 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
 
   return (
     <div className="space-y-6">
+      {/* Quick Actions */}
+      <Card className="dashboard-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-white">
+            <Database className="h-5 w-5 icon-primary" />
+            Quick Actions
+          </CardTitle>
+          <CardDescription className="text-gray-300">
+            Common administrative tasks for AR.IO node
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Button 
+              className="group relative p-4 text-left bg-gray-900 hover:bg-gray-800 rounded-lg transition-all duration-300 border border-gray-700 hover:border-gray-500 min-h-[120px] flex flex-col items-start justify-start"
+              onClick={() => handleQuickAction('restart-all')}
+              disabled={actionLoading['restart-all']}
+            >
+              <div className="flex items-center justify-between w-full mb-3">
+                <div className="p-2 bg-gray-800 rounded-lg group-hover:bg-gray-700 transition-colors">
+                  <RotateCcw className={`h-5 w-5 text-white ${actionLoading['restart-all'] ? 'animate-spin' : ''} transition-transform duration-300`} />
+                </div>
+                {actionLoading['restart-all'] && (
+                  <div className="flex items-center space-x-1">
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse animation-delay-200"></div>
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse animation-delay-400"></div>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-1 flex-1">
+                <div className="font-semibold text-white text-base leading-tight">Restart All Services</div>
+                <div className="text-xs text-gray-400 leading-relaxed line-clamp-2">
+                  {actionLoading['restart-all'] ? 'Restarting containers...' : 'Restart all running containers'}
+                </div>
+              </div>
+            </Button>
+            
+            <Button 
+              className="group relative p-4 text-left bg-gray-900 hover:bg-gray-800 rounded-lg transition-all duration-300 border border-gray-700 hover:border-gray-500 min-h-[120px] flex flex-col items-start justify-start"
+              onClick={() => handleQuickAction(shouldShowStartAll ? 'start-all' : 'stop-all')}
+              disabled={actionLoading['stop-all'] || actionLoading['start-all']}
+            >
+              <div className="flex items-center justify-between w-full mb-3">
+                <div className="p-2 bg-gray-800 rounded-lg group-hover:bg-gray-700 transition-colors">
+                  <Power className={`h-5 w-5 text-white transition-all duration-300 ${(actionLoading['stop-all'] || actionLoading['start-all']) ? 'animate-pulse' : ''}`} />
+                </div>
+                {(actionLoading['stop-all'] || actionLoading['start-all']) && (
+                  <div className="flex items-center space-x-1">
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse animation-delay-200"></div>
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse animation-delay-400"></div>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-1 flex-1">
+                <div className="font-semibold text-white text-base leading-tight">
+                  {shouldShowStartAll ? 'Start All Services' : 'Stop All Services'}
+                </div>
+                <div className="text-xs text-gray-400 leading-relaxed line-clamp-2">
+                  {actionLoading['stop-all'] ? 'Stopping containers...' : 
+                   actionLoading['start-all'] ? 'Starting containers...' : 
+                   shouldShowStartAll ? 'Start all stopped containers' : 'Stop all running containers'}
+                </div>
+              </div>
+            </Button>
+            
+            <Button 
+              className="group relative p-4 text-left bg-gray-900 hover:bg-gray-800 rounded-lg transition-all duration-300 border border-gray-700 hover:border-gray-500 min-h-[120px] flex flex-col items-start justify-start"
+              onClick={() => handleQuickAction('backup-config')}
+              disabled={actionLoading['backup-config']}
+            >
+              <div className="flex items-center justify-between w-full mb-3">
+                <div className="p-2 bg-gray-800 rounded-lg group-hover:bg-gray-700 transition-colors">
+                  <FolderArchive className={`h-5 w-5 text-white ${actionLoading['backup-config'] ? 'animate-bounce' : ''} transition-transform duration-300`} />
+                </div>
+                {actionLoading['backup-config'] && (
+                  <div className="flex items-center space-x-1">
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse animation-delay-200"></div>
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse animation-delay-400"></div>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-1 flex-1">
+                <div className="font-semibold text-white text-base leading-tight">Backup Configuration</div>
+                <div className="text-xs text-gray-400 leading-relaxed line-clamp-2">
+                  {actionLoading['backup-config'] ? 'Creating backup...' : 'Create configuration backup'}
+                </div>
+              </div>
+            </Button>
+            
+            <Button 
+              className="group relative p-4 text-left bg-gray-900 hover:bg-gray-800 rounded-lg transition-all duration-300 border border-gray-700 hover:border-gray-500 min-h-[120px] flex flex-col items-start justify-start"
+              onClick={() => {
+                if (showPruneOption) {
+                  handleQuickAction('update-node')
+                  setShowPruneOption(false)
+                } else {
+                  setShowPruneOption(true)
+                }
+              }}
+              disabled={actionLoading['update-node']}
+            >
+              <div className="flex items-center justify-between w-full mb-3">
+                <div className="p-2 bg-gray-800 rounded-lg group-hover:bg-gray-700 transition-colors">
+                  <Download className={`h-5 w-5 text-white ${actionLoading['update-node'] ? 'animate-pulse' : ''} transition-transform duration-300`} />
+                </div>
+                {actionLoading['update-node'] && (
+                  <div className="flex items-center space-x-1">
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse animation-delay-200"></div>
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse animation-delay-400"></div>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-1 flex-1">
+                <div className="font-semibold text-white text-base leading-tight">Update Node</div>
+                <div className="text-xs text-gray-400 leading-relaxed line-clamp-2">
+                  {actionLoading['update-node'] ? 'Updating node...' : showPruneOption ? 'Configure options below' : 'Update to latest version'}
+                </div>
+              </div>
+            </Button>
+          </div>
+          
+          {/* Docker Prune Option (only shown when user clicks Update Node) */}
+          {showPruneOption && (
+            <div className="mt-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  {/* Force Update Option */}
+                  <div className="flex items-start space-x-3">
+                    <div className="flex items-center space-x-2 mt-1">
+                      <input
+                        type="checkbox"
+                        id="forceUpdate"
+                        checked={forceUpdate}
+                        onChange={(e) => setForceUpdate(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                      />
+                      <label htmlFor="forceUpdate" className="text-sm font-medium text-white cursor-pointer">
+                        Force Update (Skip Version Check)
+                      </label>
+                    </div>
+                  </div>
+                  <div className="ml-6 space-y-2">
+                    <p className="text-sm text-gray-300">
+                      Bypasses version checking and proceeds with update regardless of current version.
+                    </p>
+                    <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-3">
+                      <div className="flex items-start space-x-2">
+                        <AlertTriangle className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                        <div className="text-xs text-blue-200 space-y-1">
+                          <p className="font-medium">Bandwidth Optimization</p>
+                          <p>By default, the system checks current vs. latest versions to avoid unnecessary updates and save bandwidth.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Custom Changes Handling */}
+                  <div className="space-y-3">
+                    <div className="text-sm font-medium text-white">
+                      Handle Custom Changes:
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="flex items-start space-x-3">
+                        <div className="flex items-center space-x-2 mt-1">
+                          <input
+                            type="radio"
+                            id="handleStash"
+                            name="handleChanges"
+                            value="stash"
+                            checked={handleChanges === 'stash'}
+                            onChange={(e) => setHandleChanges(e.target.value as 'stash')}
+                            className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500 focus:ring-2"
+                          />
+                          <label htmlFor="handleStash" className="text-sm font-medium text-white cursor-pointer">
+                            Stash Changes (Recommended)
+                          </label>
+                        </div>
+                      </div>
+                      <div className="ml-6">
+                        <p className="text-xs text-gray-300">
+                          Temporarily saves your custom changes. Use `git stash pop` to restore them after update.
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-start space-x-3">
+                        <div className="flex items-center space-x-2 mt-1">
+                          <input
+                            type="radio"
+                            id="handleBackup"
+                            name="handleChanges"
+                            value="backup"
+                            checked={handleChanges === 'backup'}
+                            onChange={(e) => setHandleChanges(e.target.value as 'backup')}
+                            className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500 focus:ring-2"
+                          />
+                          <label htmlFor="handleBackup" className="text-sm font-medium text-white cursor-pointer">
+                            Backup to Branch
+                          </label>
+                        </div>
+                      </div>
+                      <div className="ml-6">
+                        <p className="text-xs text-gray-300">
+                          Creates a backup branch with your changes, then resets to clean state.
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-start space-x-3">
+                        <div className="flex items-center space-x-2 mt-1">
+                          <input
+                            type="radio"
+                            id="handleReset"
+                            name="handleChanges"
+                            value="reset"
+                            checked={handleChanges === 'reset'}
+                            onChange={(e) => setHandleChanges(e.target.value as 'reset')}
+                            className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500 focus:ring-2"
+                          />
+                          <label htmlFor="handleReset" className="text-sm font-medium text-white cursor-pointer">
+                            Discard Changes (Permanent)
+                          </label>
+                        </div>
+                      </div>
+                      <div className="ml-6">
+                        <p className="text-xs text-gray-300">
+                          Permanently discards all custom changes. Cannot be undone.
+                        </p>
+                        <div className="bg-red-900/20 border border-red-700/50 rounded-lg p-2 mt-1">
+                          <div className="flex items-start space-x-2">
+                            <AlertTriangle className="h-3 w-3 text-red-400 mt-0.5 flex-shrink-0" />
+                            <p className="text-xs text-red-200">Warning: This will permanently delete your custom changes.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Docker Prune Option */}
+                  <div className="flex items-start space-x-3">
+                    <div className="flex items-center space-x-2 mt-1">
+                      <input
+                        type="checkbox"
+                        id="performPrune"
+                        checked={performPrune}
+                        onChange={(e) => setPerformPrune(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                      />
+                      <label htmlFor="performPrune" className="text-sm font-medium text-white cursor-pointer">
+                        Enable Docker System Prune (Optional)
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div className="ml-6 space-y-2">
+                  <p className="text-sm text-gray-300">
+                    Removes all unused Docker containers, networks, images, and build cache.
+                  </p>
+                  <div className="bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-3">
+                    <div className="flex items-start space-x-2">
+                      <AlertTriangle className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
+                      <div className="text-xs text-yellow-200 space-y-1">
+                        <p className="font-medium">Warning: System-wide cleanup</p>
+                        <p>This removes ALL unused containers, networks, and images on your system, not just AR.IO related ones.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3 pt-2">
+                  <Button
+                    onClick={() => handleQuickAction('update-node')}
+                    disabled={actionLoading['update-node']}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                  >
+                    {actionLoading['update-node'] ? 'Updating...' : 'Start Update'}
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowPruneOption(false)
+                      setPerformPrune(false)
+                      setForceUpdate(false)
+                      setHandleChanges('stash')
+                    }}
+                    variant="ghost"
+                    className="text-gray-400 hover:text-white hover:bg-gray-700/50 px-4 py-2 transition-colors border border-gray-600 hover:border-gray-500"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Action Results Display */}
+          {Object.entries(actionResults).map(([action, result]) => {
+            if (!result.message) return null;
+            
+            return (
+              <div 
+                key={action}
+                className={`mt-6 p-4 rounded-xl border-l-4 flex items-start gap-3 transition-all duration-300 ${
+                  result.success 
+                    ? 'bg-gradient-to-r from-green-900/20 to-green-800/10 border-l-green-400 border border-green-800/50' 
+                    : 'bg-gradient-to-r from-red-900/20 to-red-800/10 border-l-red-400 border border-red-800/50'
+                }`}
+              >
+                <div className={`p-2 rounded-lg ${
+                  result.success ? 'bg-green-600/20' : 'bg-red-600/20'
+                }`}>
+                  {result.success ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-400" />
+                  ) : (
+                    <AlertTriangle className="h-5 w-5 text-red-400" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className={`font-medium text-sm ${
+                    result.success ? 'text-green-300' : 'text-red-300'
+                  }`}>
+                    {result.success ? 'Action Completed Successfully' : 'Action Failed'}
+                  </div>
+                  <div className="text-sm text-gray-300 mt-1 break-words">
+                    {result.message}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
       {/* Header Stats */}
       <div className="grid gap-6 md:grid-cols-4">
         <Card className="metric-card">
@@ -372,18 +771,8 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                     <CardContent>
                       <Plot
                         data={[{
-                          x: Array.from({length: 20}, (_, i) => new Date(Date.now() - (19-i) * 60000)),
-                          y: (() => {
-                            // Use real memory metrics if available
-                            const memTotal = prometheusMetrics.metrics.node?.find(m => m.name === 'node_memory_MemTotal_bytes')?.value || 8000000000;
-                            const memAvailable = prometheusMetrics.metrics.node?.find(m => m.name === 'node_memory_MemAvailable_bytes')?.value || memTotal * 0.5;
-                            const currentUsage = ((memTotal - memAvailable) / memTotal * 100);
-                            // Generate time series with current value as baseline
-                            return Array.from({length: 20}, (_, i) => {
-                              const variance = Math.sin(i * 0.3) * 5; // Natural variation
-                              return Math.max(0, Math.min(100, currentUsage + variance));
-                            });
-                          })(),
+                          x: chartData.memory?.map(d => d.x) || [],
+                          y: chartData.memory?.map(d => d.y) || [],
                           type: 'scatter',
                           mode: 'lines',
                           name: 'Memory Usage %',
@@ -417,7 +806,17 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                             font: { color: '#9ca3af' }
                           }
                         }}
-                        config={{ displayModeBar: false }}
+        config={{ 
+          displayModeBar: false,
+          staticPlot: false,
+          scrollZoom: false,
+          doubleClick: false,
+          showTips: true,
+          displaylogo: false,
+          responsive: true,
+          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d','zoom2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+          autosizable: true
+        }}
                         style={{ width: '100%', height: '350px' }}
                       />
                     </CardContent>
@@ -491,7 +890,17 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                             font: { color: '#9ca3af' }
                           }
                         }}
-                        config={{ displayModeBar: false }}
+        config={{ 
+          displayModeBar: false,
+          staticPlot: false,
+          scrollZoom: false,
+          doubleClick: false,
+          showTips: true,
+          displaylogo: false,
+          responsive: true,
+          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d','zoom2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+          autosizable: true
+        }}
                         style={{ width: '100%', height: '350px' }}
                       />
                     </CardContent>
@@ -544,11 +953,21 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                             plot_bgcolor: 'transparent',
                             paper_bgcolor: 'transparent',
                             font: { color: '#9ca3af', size: 12 },
-                            xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' },
+                            xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', fixedrange: true },
                             yaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' },
                             legend: { x: 0, y: 1, bgcolor: 'transparent', bordercolor: 'transparent' }
                           }}
-                          config={{ displayModeBar: false }}
+          config={{ 
+          displayModeBar: false,
+          staticPlot: false,
+          scrollZoom: false,
+          doubleClick: false,
+          showTips: true,
+          displaylogo: false,
+          responsive: true,
+          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d','zoom2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+          autosizable: true
+        }}
                           style={{ width: '100%', height: '350px' }}
                         />
                       </CardContent>
@@ -564,15 +983,15 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                       <CardContent>
                         <Plot
                           data={[{
-                            x: Array.from({length: 10}, (_, i) => new Date(Date.now() - (9-i) * 30000)),
-                            y: Array.from({length: 10}, () => Math.random() * 50 + 100),
+                            x: chartData.arnsResolution?.p50?.map(d => d.x) || [],
+                            y: chartData.arnsResolution?.p50?.map(d => d.y) || [],
                             name: '50th percentile',
                             type: 'scatter',
                             mode: 'lines',
                             line: { color: '#06b6d4', width: 2 }
                           }, {
-                            x: Array.from({length: 10}, (_, i) => new Date(Date.now() - (9-i) * 30000)),
-                            y: Array.from({length: 10}, () => Math.random() * 100 + 200),
+                            x: chartData.arnsResolution?.p99?.map(d => d.x) || [],
+                            y: chartData.arnsResolution?.p99?.map(d => d.y) || [],
                             name: '99th percentile',
                             type: 'scatter',
                             mode: 'lines',
@@ -584,11 +1003,21 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                             plot_bgcolor: 'transparent',
                             paper_bgcolor: 'transparent',
                             font: { color: '#9ca3af', size: 12 },
-                            xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' },
+                            xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', fixedrange: true },
                             yaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', title: 'ms' },
                             legend: { x: 0, y: 1, bgcolor: 'transparent', bordercolor: 'transparent' }
                           }}
-                          config={{ displayModeBar: false }}
+          config={{ 
+          displayModeBar: false,
+          staticPlot: false,
+          scrollZoom: false,
+          doubleClick: false,
+          showTips: true,
+          displaylogo: false,
+          responsive: true,
+          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d','zoom2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+          autosizable: true
+        }}
                           style={{ width: '100%', height: '350px' }}
                         />
                       </CardContent>
@@ -604,8 +1033,8 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                       <CardContent>
                         <Plot
                           data={[{
-                            x: Array.from({length: 10}, (_, i) => new Date(Date.now() - (9-i) * 30000)),
-                            y: Array.from({length: 10}, () => Math.random() * 20 + 75),
+                            x: chartData.cacheHitRate?.map(d => d.x) || [],
+                            y: chartData.cacheHitRate?.map(d => d.y) || [],
                             name: 'ArNS Cache Hit Rate',
                             type: 'scatter',
                             mode: 'lines',
@@ -619,11 +1048,21 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                             plot_bgcolor: 'transparent',
                             paper_bgcolor: 'transparent',
                             font: { color: '#9ca3af', size: 12 },
-                            xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' },
+                            xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', fixedrange: true },
                             yaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', title: '%' },
                             legend: { x: 0, y: 1, bgcolor: 'transparent', bordercolor: 'transparent' }
                           }}
-                          config={{ displayModeBar: false }}
+          config={{ 
+          displayModeBar: false,
+          staticPlot: false,
+          scrollZoom: false,
+          doubleClick: false,
+          showTips: true,
+          displaylogo: false,
+          responsive: true,
+          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d','zoom2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+          autosizable: true
+        }}
                           style={{ width: '100%', height: '350px' }}
                         />
                       </CardContent>
@@ -638,8 +1077,8 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                     <CardContent>
                       <Plot
                         data={[{
-                          x: Array.from({length: 10}, (_, i) => new Date(Date.now() - (9-i) * 30000)),
-                          y: Array.from({length: 10}, () => Math.random() * 100 + 200),
+                          x: chartData.responseTime?.map(d => d.x) || [],
+                          y: chartData.responseTime?.map(d => d.y) || [],
                           name: 'Average Response Time (ms)',
                           type: 'scatter',
                           mode: 'lines',
@@ -651,10 +1090,20 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                           plot_bgcolor: 'transparent',
                           paper_bgcolor: 'transparent',
                           font: { color: '#9ca3af', size: 12 },
-                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' },
+                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', fixedrange: true },
                           yaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', title: 'ms' }
                         }}
-                        config={{ displayModeBar: false }}
+        config={{ 
+          displayModeBar: false,
+          staticPlot: false,
+          scrollZoom: false,
+          doubleClick: false,
+          showTips: true,
+          displaylogo: false,
+          responsive: true,
+          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d','zoom2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+          autosizable: true
+        }}
                         style={{ width: '100%', height: '350px' }}
                       />
                     </CardContent>
@@ -668,8 +1117,8 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                     <CardContent>
                       <Plot
                         data={[{
-                          x: Array.from({length: 10}, (_, i) => new Date(Date.now() - (9-i) * 30000)),
-                          y: Array.from({length: 10}, () => Math.random() * 20 + 10),
+                          x: chartData.graphqlRequests?.map(d => d.x) || [],
+                          y: chartData.graphqlRequests?.map(d => d.y) || [],
                           name: '200',
                           type: 'scatter',
                           mode: 'lines',
@@ -681,10 +1130,20 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                           plot_bgcolor: 'transparent',
                           paper_bgcolor: 'transparent',
                           font: { color: '#9ca3af', size: 12 },
-                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' },
+                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', fixedrange: true },
                           yaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' }
                         }}
-                        config={{ displayModeBar: false }}
+        config={{ 
+          displayModeBar: false,
+          staticPlot: false,
+          scrollZoom: false,
+          doubleClick: false,
+          showTips: true,
+          displaylogo: false,
+          responsive: true,
+          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d','zoom2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+          autosizable: true
+        }}
                         style={{ width: '100%', height: '350px' }}
                       />
                     </CardContent>
@@ -698,8 +1157,8 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                     <CardContent>
                       <Plot
                         data={[{
-                          x: Array.from({length: 10}, (_, i) => new Date(Date.now() - (9-i) * 30000)),
-                          y: Array.from({length: 10}, () => Math.random() * 10 + 45),
+                          x: chartData.fsUsage?.map(d => d.x) || [],
+                          y: chartData.fsUsage?.map(d => d.y) || [],
                           name: 'File System Usage %',
                           type: 'scatter',
                           mode: 'lines',
@@ -711,10 +1170,20 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                           plot_bgcolor: 'transparent',
                           paper_bgcolor: 'transparent',
                           font: { color: '#9ca3af', size: 12 },
-                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' },
+                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', fixedrange: true },
                           yaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', title: '%' }
                         }}
-                        config={{ displayModeBar: false }}
+        config={{ 
+          displayModeBar: false,
+          staticPlot: false,
+          scrollZoom: false,
+          doubleClick: false,
+          showTips: true,
+          displaylogo: false,
+          responsive: true,
+          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d','zoom2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+          autosizable: true
+        }}
                         style={{ width: '100%', height: '350px' }}
                       />
                     </CardContent>
@@ -728,15 +1197,15 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                     <CardContent>
                       <Plot
                         data={[{
-                          x: Array.from({length: 10}, (_, i) => new Date(Date.now() - (9-i) * 30000)),
-                          y: Array.from({length: 10}, () => Math.random() * 1000000 + 500000),
+                          x: chartData.ioRead?.map(d => d.x) || [],
+                          y: chartData.ioRead?.map(d => d.y) || [],
                           name: 'IO - read (bytes/sec)',
                           type: 'scatter',
                           mode: 'lines',
                           line: { color: '#10b981', width: 2 }
                         }, {
-                          x: Array.from({length: 10}, (_, i) => new Date(Date.now() - (9-i) * 30000)),
-                          y: Array.from({length: 10}, () => Math.random() * 800000 + 300000),
+                          x: chartData.ioWrite?.map(d => d.x) || [],
+                          y: chartData.ioWrite?.map(d => d.y) || [],
                           name: 'IO - write (bytes/sec)',
                           type: 'scatter',
                           mode: 'lines',
@@ -748,11 +1217,21 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                           plot_bgcolor: 'transparent',
                           paper_bgcolor: 'transparent',
                           font: { color: '#9ca3af', size: 12 },
-                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' },
-                          yaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', title: 'bytes/sec' },
+                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', fixedrange: true },
+                          yaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', title: 'bytes/sec', fixedrange: true },
                           legend: { x: 0, y: 1, bgcolor: 'transparent', bordercolor: 'transparent' }
                         }}
-                        config={{ displayModeBar: false }}
+        config={{ 
+          displayModeBar: false,
+          staticPlot: false,
+          scrollZoom: false,
+          doubleClick: false,
+          showTips: true,
+          displaylogo: false,
+          responsive: true,
+          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d','zoom2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+          autosizable: true
+        }}
                         style={{ width: '100%', height: '350px' }}
                       />
                     </CardContent>
@@ -802,8 +1281,8 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-2">
                       <div className={`w-3 h-3 rounded-full ${
-                        service.status === 'running' ? 'bg-white' : 
-                        service.status === 'stopped' ? 'bg-gray-500' : 'bg-gray-600'
+                        service.status === 'running' ? 'bg-green-500' : 
+                        service.status === 'stopped' ? 'bg-red-500' : 'bg-gray-400'
                       }`} />
                       <p className="font-medium text-white text-sm">{service.name}</p>
                     </div>
@@ -833,84 +1312,6 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
           </CardContent>
         </Card>
       </div>
-
-      {/* Quick Actions */}
-      <Card className="dashboard-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-white">
-            <Database className="h-5 w-5 icon-primary" />
-            Quick Actions
-          </CardTitle>
-          <CardDescription className="text-gray-300">
-            Common administrative tasks for AR.IO node
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Button 
-              className="p-4 text-left bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700 hover:border-white h-auto flex-col items-start"
-              onClick={() => handleQuickAction('restart-all')}
-              disabled={actionLoading['restart-all']}
-            >
-              <div className="font-medium text-white">Restart All Services</div>
-              <div className="text-sm text-gray-400">{actionLoading['restart-all'] ? 'Restarting...' : 'Restart all running containers'}</div>
-            </Button>
-            <Button 
-              className="p-4 text-left bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700 hover:border-white h-auto flex-col items-start"
-              onClick={() => handleQuickAction(shouldShowStartAll ? 'start-all' : 'stop-all')}
-              disabled={actionLoading['stop-all'] || actionLoading['start-all']}
-            >
-              <div className="font-medium text-white">
-                {shouldShowStartAll ? 'Start All Services' : 'Stop All Services'}
-              </div>
-              <div className="text-sm text-gray-400">
-                {actionLoading['stop-all'] ? 'Stopping...' : 
-                 actionLoading['start-all'] ? 'Starting...' : 
-                 shouldShowStartAll ? 'Start all stopped containers' : 'Stop all running containers'}
-              </div>
-            </Button>
-            <Button 
-              className="p-4 text-left bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700 hover:border-white h-auto flex-col items-start"
-              onClick={() => handleQuickAction('backup-config')}
-              disabled={actionLoading['backup-config']}
-            >
-              <div className="font-medium text-white">Backup Configuration</div>
-              <div className="text-sm text-gray-400">{actionLoading['backup-config'] ? 'Backing up...' : 'Create config backup'}</div>
-            </Button>
-            <Button 
-              className="p-4 text-left bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700 hover:border-white h-auto flex-col items-start"
-              onClick={() => handleQuickAction('update-node')}
-              disabled={actionLoading['update-node']}
-            >
-              <div className="font-medium text-white">Update Node</div>
-              <div className="text-sm text-gray-400">{actionLoading['update-node'] ? 'Updating...' : 'Check for AR.IO updates'}</div>
-            </Button>
-          </div>
-          
-          {/* Action Results Display */}
-          {Object.entries(actionResults).map(([action, result]) => {
-            if (!result.message) return null;
-            
-            return (
-              <div 
-                key={action}
-                className={`mt-4 p-3 rounded-lg border flex items-center gap-2 ${
-                  result.success 
-                    ? 'bg-gray-800 border-gray-600 text-white' 
-                    : 'bg-gray-900 border-gray-700 text-gray-300'
-                }`}
-              >
-                {result.success ? (
-                  <CheckCircle2 className="h-4 w-4 icon-success" />
-                ) : (
-                  <AlertTriangle className="h-4 w-4 icon-error" />
-                )}
-                <span className="text-sm">{result.message}</span>
-              </div>
-            );
-          })}
-        </CardContent>
-      </Card>
     </div>
   )
 }

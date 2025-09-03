@@ -9,6 +9,7 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { BundlerServiceInfoCard } from '@/components/bundler-service-info-card'
 import { AOComputeInfoCard } from '@/components/ao-compute-info-card'
 import { ObserverInfoCard } from '@/components/observer-info-card'
+import { getApiUrl } from '@/lib/api-utils'
 
 interface DockerInfo {
   status: string
@@ -47,53 +48,66 @@ export function OverviewTab({ service }: OverviewTabProps) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    
     const fetchData = async () => {
+      if (!mounted) return
+      
       try {
         // Fetch container info and metrics in parallel
         const fetchPromises = [
-          fetch(`/api/docker/${service}/info`),
-          fetch(`/api/docker/${service}/metrics`)
+          fetch(getApiUrl(`/api/docker/${service}/info`)),
+          fetch(getApiUrl(`/api/docker/${service}/metrics`))
         ]
         
         // Fetch additional gateway info for gateway service
         if (service === 'gateway') {
-          fetchPromises.push(fetch('/api/ar-io-gateway/info'))
+          fetchPromises.push(fetch(getApiUrl('/api/ar-io-gateway/info')))
         }
         
         const responses = await Promise.all(fetchPromises)
         const [infoResponse, metricsResponse, gatewayInfoResponse] = responses
         
+        if (!mounted) return
+        
         if (infoResponse.ok) {
           const infoData = await infoResponse.json()
-          setDockerInfo(infoData)
+          if (mounted) setDockerInfo(infoData)
         }
         
         if (metricsResponse.ok) {
           const metricsData = await metricsResponse.json()
-          setMetrics(metricsData)
+          if (mounted) setMetrics(metricsData)
         }
         
         // Process gateway info response
         if (service === 'gateway' && gatewayInfoResponse && gatewayInfoResponse.ok) {
           const gatewayData = await gatewayInfoResponse.json()
           // Extract gateway info from API response
-          setGatewayInfo(gatewayData.info || gatewayData)
+          if (mounted) setGatewayInfo(gatewayData.info || gatewayData)
         }
       } catch (error) {
         console.error('Failed to fetch container data:', error)
       } finally {
-        setLoading(false)
+        if (mounted) setLoading(false)
       }
     }
 
     fetchData()
-    const interval = setInterval(fetchData, 5000)
-    return () => clearInterval(interval)
+    const interval = setInterval(() => {
+      if (mounted) fetchData()
+    }, 5000)
+    
+    return () => {
+      mounted = false
+      clearInterval(interval)
+    }
   }, [service])
 
   const handleAction = async (action: string) => {
     try {
-      await fetch(`/api/docker/${service}/${action}`, { method: 'POST' })
+      await fetch(getApiUrl(`/api/docker/${service}/${action}`), { method: 'POST' })
       setTimeout(() => {
         window.location.reload()
       }, 1000)
@@ -284,7 +298,8 @@ export function OverviewTab({ service }: OverviewTabProps) {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-300 flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${
-                dockerInfo?.status === 'running' ? 'bg-white' : 'bg-gray-500'
+                dockerInfo?.status === 'running' ? 'bg-green-500' : 
+                dockerInfo?.status === 'stopped' ? 'bg-red-500' : 'bg-gray-400'
               }`} />
               Container Status
             </CardTitle>

@@ -5,7 +5,6 @@ import { readEnvFile, updateEnvFile } from '@/lib/env-utils';
 import { join } from 'path';
 import { homedir } from 'os';
 
-// Helper function to expand tilde to home directory
 function expandPath(path: string): string {
   if (path.startsWith('~/') || path === '~') {
     return path.replace(/^~(?=$|\/|\\)/, homedir())

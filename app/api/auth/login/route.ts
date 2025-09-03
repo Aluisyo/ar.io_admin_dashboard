@@ -4,7 +4,6 @@ export async function POST(request: NextRequest) {
   try {
     const { username, password } = await request.json()
     
-    // Get credentials from environment variables
     const adminUsername = process.env.ADMIN_USERNAME
     const adminPassword = process.env.ADMIN_PASSWORD
     

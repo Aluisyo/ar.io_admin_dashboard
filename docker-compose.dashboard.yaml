@@ -2,18 +2,21 @@ services:
   admin-dashboard:
     image: aluisyo/ar.io_admin_dashboard:latest
     ports:
-      - '3001:3001'
+      - '${DASHBOARD_PORT:-3001}:3001'
     env_file:
       - .env.dashboard
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - $HOME/ar-io-node:/home/node/ar-io-node
-      - $HOME/ar-io-backups:/home/node/ar-io-backups
+      - ${AR_IO_NODE_PATH:-$HOME/ar-io-node}:/home/node/ar-io-node
+      - ${AR_IO_BACKUPS_PATH:-$HOME/ar-io-backups}:/home/node/ar-io-backups
       - ./.env.dashboard:/app/.env.dashboard
     environment:
       - HOME=/home/node
       - AR_IO_NODE_PATH=/home/node/ar-io-node
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      # Optional: Set base path for reverse proxy deployments
+      # - NEXT_PUBLIC_BASE_PATH=/dashboard
     networks:
       - ar-io-network
 

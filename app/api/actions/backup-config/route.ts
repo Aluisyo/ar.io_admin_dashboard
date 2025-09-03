@@ -10,7 +10,6 @@ import { homedir } from 'os'
 
 const execAsync = promisify(exec)
 
-// Helper function to expand tilde to home directory
 function expandPath(path: string): string {
   if (path.startsWith('~/') || path === '~') {
     return path.replace(/^~(?=$|\/|\\)/, homedir())
@@ -29,16 +28,13 @@ export async function POST() {
     const timestamp = new Date().toISOString().replace(/[:.-]/g, '_')
     const backupFileName = `config_backup_${timestamp}.tar.gz`
     
-    // Use a writable directory for backups (user's home directory or /tmp)
     const userBackupDir = join(process.env.HOME || '/tmp', 'ar-io-backups')
     const backupFilePath = join(userBackupDir, backupFileName)
 
-    // Create backup directory with proper permissions
     if (!existsSync(userBackupDir)) {
       mkdirSync(userBackupDir, { recursive: true, mode: 0o755 })
     }
 
-    // Verify we can write to the backup directory
     try {
       await access(userBackupDir, constants.W_OK)
     } catch (permError) {
@@ -46,7 +42,6 @@ export async function POST() {
       return NextResponse.json({ error: 'Cannot access backup directory' }, { status: 500 })
     }
 
-    // Find all .env files
     const findCommand = `find "${arIoNodePath}" -maxdepth 1 -name "*.env*" -type f`
     const { stdout: envFiles } = await execAsync(findCommand)
     
@@ -54,21 +49,17 @@ export async function POST() {
       return NextResponse.json({ error: 'No .env files found to backup' }, { status: 404 })
     }
 
-    // Create the backup with better error handling
     const envFilesList = envFiles.trim().split('\n').map(f => f.trim()).filter(f => f)
     console.log('Backing up files:', envFilesList)
     
-    // Use a more robust tar command
     const tarCommand = `tar -czf "${backupFilePath}" -C "${arIoNodePath}" ${envFilesList.map(f => `"${f.replace(arIoNodePath + '/', '')}"`).join(' ')}`
     
     await execAsync(tarCommand)
 
-    // Verify the backup was created
     if (!existsSync(backupFilePath)) {
       throw new Error('Backup file was not created')
     }
 
-    // Get backup file size for confirmation
     const { stdout: sizeOutput } = await execAsync(`ls -lh "${backupFilePath}" | awk '{print $5}'`)
     const fileSize = sizeOutput.trim()
 

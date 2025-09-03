@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Cpu, Wallet, Clock, CheckCircle, AlertTriangle, Copy } from 'lucide-react'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { Button } from '@/components/ui/button'
+import { getApiUrl } from '@/lib/api-utils'
 
 interface AOCUInfo {
   address: string
@@ -33,7 +34,7 @@ export function AOComputeInfoCard() {
     }
     setError(null)
     try {
-      const response = await fetch('/api/ao/cu/info')
+      const response = await fetch(getApiUrl('/api/ao/cu/info'))
       const data = await response.json()
       
       if (response.ok) {

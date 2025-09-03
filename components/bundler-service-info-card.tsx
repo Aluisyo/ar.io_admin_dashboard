@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Server, Wallet, Globe, HardDrive, CheckCircle, AlertTriangle, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { getApiUrl } from '@/lib/api-utils'
 
 interface BundlerInfo {
   version: string
@@ -37,7 +38,7 @@ export function BundlerServiceInfoCard() {
     }
     setError(null)
     try {
-      const response = await fetch('/api/bundler/info')
+      const response = await fetch(getApiUrl('/api/bundler/info'))
       const data = await response.json()
       
       if (response.ok) {

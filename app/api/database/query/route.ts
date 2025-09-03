@@ -8,7 +8,6 @@ import { homedir } from 'os'
 
 const execAsync = promisify(exec)
 
-// Helper function to expand tilde to home directory
 function expandPath(path: string): string {
   if (path.startsWith('~/') || path === '~') {
     return path.replace(/^~(?=$|\/|\\)/, homedir())
@@ -44,7 +43,8 @@ export async function POST(request: NextRequest) {
         // Use sqlite3 command-line tool. -json for JSON output.
         // IMPORTANT: Direct execution of user-provided queries is dangerous.
         // In a production environment, use parameterized queries or an ORM.
-        command = `sqlite3 -json ${GATEWAY_SQLITE_DB_PATH} "${query.replace(/"/g, '""')}"`
+        const dbPath = GATEWAY_SQLITE_DB_PATH
+        command = `sqlite3 "${dbPath}" ".mode json" "${query}"`
         break
       case 'clickhouse':
         if (service !== 'clickhouse') {
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         // Assumes clickhouse-client is installed and configured to connect to the local ClickHouse instance.
         // IMPORTANT: Direct execution of user-provided queries is dangerous.
         // In a production environment, use parameterized queries or a ClickHouse client library.
-        command = `clickhouse-client --query="${query.replace(/"/g, '\\"')}" --format JSONEachRow`
+        command = `docker exec ar-io-node-clickhouse-1 clickhouse-client --format JSONEachRow --query "${query}"`
         break
       default:
         return NextResponse.json({ error: 'Unsupported database type.' }, { status: 400 })

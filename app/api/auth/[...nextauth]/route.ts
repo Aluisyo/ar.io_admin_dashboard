@@ -18,7 +18,6 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        // Get credentials from environment variables
         const adminUsername = process.env.ADMIN_USERNAME || "admin"
         const adminPassword = process.env.ADMIN_PASSWORD || "admin"
 
@@ -37,7 +36,7 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   pages: {
-    signIn: '/login',
+    signIn: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/login`,
   },
   session: {
     strategy: "jwt",
@@ -45,9 +44,15 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-development",
   callbacks: {
     async redirect({ url, baseUrl }) {
-      // If url starts with /, it's a relative URL - use baseUrl
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      
+      // If url starts with /, it's a relative URL - combine with baseUrl and basePath
       if (url.startsWith("/")) {
-        return `${baseUrl}${url}`
+        // Handle base path correctly for relative URLs
+        if (basePath && !url.startsWith(basePath)) {
+          return `${baseUrl}${basePath}${url}`;
+        }
+        return `${baseUrl}${url}`;
       }
       
       // If url is absolute and on same origin as baseUrl, allow it
@@ -58,11 +63,11 @@ export const authOptions: NextAuthOptions = {
           return url
         }
       } catch {
-        // Invalid URL, fallback to baseUrl
+        // Invalid URL, fallback to baseUrl with basePath
       }
       
-      // Default fallback - return baseUrl
-      return baseUrl
+      // Default fallback - return baseUrl with basePath for dashboard root
+      return `${baseUrl}${basePath || ''}`;
     },
     async jwt({ token, user }) {
       if (user) {

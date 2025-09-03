@@ -9,6 +9,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useState, useEffect } from 'react'
 import { signOut } from 'next-auth/react'
+import { apiGet, apiPost } from '@/lib/api-utils'
 
 interface Notification {
   id: number
@@ -28,7 +29,7 @@ export function DashboardHeader() {
     const fetchGatewayVersion = async () => {
       try {
         console.log('DashboardHeader: Fetching gateway info from API');
-        const response = await fetch('/api/ar-io-gateway/info');
+        const response = await apiGet('/api/ar-io-gateway/info');
         console.log('DashboardHeader: API response status', response.status, response.statusText);
         if (response.ok) {
           const data = await response.json();
@@ -57,7 +58,7 @@ export function DashboardHeader() {
   }, []);
   const fetchNotifications = async () => {
     try {
-      const response = await fetch('/api/notifications')
+      const response = await apiGet('/api/notifications')
       if (response.ok) {
         const data: Notification[] = await response.json()
         setNotifications(data)
@@ -75,13 +76,7 @@ export function DashboardHeader() {
 
   const handleMarkAllAsRead = async () => {
     try {
-      const response = await fetch('/api/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ action: 'mark-all-read' }),
-      });
+      const response = await apiPost('/api/notifications', { action: 'mark-all-read' });
       if (response.ok) {
         setNotifications(prev => prev.map(n => ({ ...n, read: true })));
         // Also force a re-fetch to make sure we're in sync

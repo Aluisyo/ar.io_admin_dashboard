@@ -35,13 +35,11 @@ export async function addNotification(
   }
 }
 
-// Helper functions for different notification types
 export const addSuccessNotification = (message: string) => addNotification(message, 'success');
 export const addErrorNotification = (message: string) => addNotification(message, 'error');
 export const addWarningNotification = (message: string) => addNotification(message, 'warning');
 export const addInfoNotification = (message: string) => addNotification(message, 'info');
 
-// Specific notifications for quick actions
 export const notifyRestart = (serviceName?: string) => {
   const message = serviceName 
     ? `Service "${serviceName}" restarted successfully`
@@ -103,14 +101,12 @@ export const notifyError = (action: string, error: string) => {
   return addErrorNotification(`Failed to ${action}: ${error}`);
 };
 
-// Boot loop detection notification
 export const notifyBootLoop = (serviceName: string, restartCount: number) => {
   return addWarningNotification(
     `Service "${serviceName}" appears to be in a boot loop (${restartCount} restarts in the last 5 minutes)`
   );
 };
 
-// Container operation notifications
 export const notifyContainerStart = (serviceName: string) => {
   return addSuccessNotification(`${serviceName} service started successfully`);
 };
@@ -127,7 +123,6 @@ export const notifyContainerError = (serviceName: string, action: string, error:
   return addErrorNotification(`Failed to ${action} ${serviceName} service: ${error}`);
 };
 
-// System-wide notifications
 export const notifySystemHealthCheck = (healthyServices: number, totalServices: number) => {
   if (healthyServices === totalServices) {
     return addSuccessNotification(`All ${totalServices} services are running healthy`);

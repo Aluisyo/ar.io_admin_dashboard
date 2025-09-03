@@ -8,8 +8,8 @@ import { Cpu, MemoryStick, HardDrive, Network, TrendingUp, Activity, Server, Dat
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import dynamic from 'next/dynamic'
 import { Layout, Data } from 'plotly.js'
+import { getApiUrl } from '@/lib/api-utils'
 
-// Dynamically import Plotly to avoid SSR issues
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false })
 
 interface ContainerMetrics {
@@ -43,11 +43,26 @@ export function MetricsTab({ service }: MetricsTabProps) {
   const [metrics, setMetrics] = useState<ContainerMetrics | null>(null)
   const [gatewayMetrics, setGatewayMetrics] = useState<GatewayMetrics | null>(null)
   const [metricsHistory, setMetricsHistory] = useState<MetricHistory[]>([])
+  const [chartData, setChartData] = useState<Record<string, any>>({})
+
+  // Generate stable chart data only when needed
+  const generateStableChartData = (baseValue: number, points: number = 20, variance: number = 5) => {
+    const data = []
+    for (let i = 0; i < points; i++) {
+      const timeOffset = (points - 1 - i) * 60000 // 1 minute intervals
+      const noise = (Math.sin(i * 0.3) + Math.cos(i * 0.5)) * variance
+      data.push({
+        x: new Date(Date.now() - timeOffset),
+        y: Math.max(0, Math.min(100, baseValue + noise))
+      })
+    }
+    return data
+  }
 
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const response = await fetch(`/api/docker/${service}/metrics`)
+        const response = await fetch(getApiUrl(`/api/docker/${service}/metrics`))
         if (response.ok) {
           const data = await response.json()
           setMetrics(data)
@@ -61,7 +76,7 @@ export function MetricsTab({ service }: MetricsTabProps) {
       if (service !== 'gateway') return
       
       try {
-        const response = await fetch('/api/ar-io-gateway/metrics')
+        const response = await fetch(getApiUrl('/api/ar-io-gateway/metrics'))
         if (response.ok) {
           const data = await response.json()
           setGatewayMetrics(data)
@@ -96,6 +111,24 @@ export function MetricsTab({ service }: MetricsTabProps) {
 
     fetchMetrics()
     fetchGatewayMetrics()
+    
+    // Generate stable chart data initially
+    setChartData({
+      memory: generateStableChartData(60, 20, 8),
+      cpu: generateStableChartData(25, 20, 10),
+      requests200: generateStableChartData(100, 15, 20),
+      requests5xx: generateStableChartData(5, 15, 2),
+      arnsResolution: {
+        p50: generateStableChartData(120, 10, 25),
+        p99: generateStableChartData(250, 10, 50)
+      },
+      responseTime: generateStableChartData(200, 10, 40),
+      fsUsage: generateStableChartData(50, 10, 5),
+      ioRead: generateStableChartData(750000, 10, 200000),
+      ioWrite: generateStableChartData(550000, 10, 150000),
+      cacheHitRate: generateStableChartData(85, 10, 8),
+      graphqlRequests: generateStableChartData(15, 10, 5)
+    })
     
     const interval = setInterval(() => {
       fetchMetrics()
@@ -241,18 +274,8 @@ export function MetricsTab({ service }: MetricsTabProps) {
                     <CardContent>
                       <Plot
                         data={[{
-                          x: Array.from({length: 20}, (_, i) => new Date(Date.now() - (19-i) * 60000)),
-                          y: (() => {
-                            // Use real memory metrics if available
-                            const memTotal = gatewayMetrics.metrics.node?.find(m => m.name === 'node_memory_MemTotal_bytes')?.value || 8000000000;
-                            const memAvailable = gatewayMetrics.metrics.node?.find(m => m.name === 'node_memory_MemAvailable_bytes')?.value || memTotal * 0.5;
-                            const currentUsage = ((memTotal - memAvailable) / memTotal * 100);
-                            // Generate time series with current value as baseline
-                            return Array.from({length: 20}, (_, i) => {
-                              const variance = Math.sin(i * 0.3) * 5; // Natural variation
-                              return Math.max(0, Math.min(100, currentUsage + variance));
-                            });
-                          })(),
+                          x: chartData.memory?.map(d => d.x) || [],
+                          y: chartData.memory?.map(d => d.y) || [],
                           type: 'scatter',
                           mode: 'lines',
                           name: 'Memory Usage %',
@@ -286,7 +309,17 @@ export function MetricsTab({ service }: MetricsTabProps) {
                             font: { color: '#9ca3af' }
                           }
                         }}
-                        config={{ displayModeBar: false }}
+                        config={{ 
+                          displayModeBar: false,
+                          staticPlot: false,
+                          scrollZoom: false,
+                          doubleClick: false,
+                          showTips: true,
+                          displaylogo: false,
+                          responsive: true,
+                          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d'],
+                          autosizable: true
+                        }}
                         style={{ width: '100%', height: '350px' }}
                       />
                     </CardContent>
@@ -300,37 +333,12 @@ export function MetricsTab({ service }: MetricsTabProps) {
                     <CardContent>
                       <Plot
                         data={[{
-                          x: Array.from({length: 20}, (_, i) => new Date(Date.now() - (19-i) * 60000)),
-                          y: Array.from({length: 20}, () => {
-                            // Simulate: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"})))
-                            return 100 - (Math.random() * 20 + 70); // 10-30% CPU usage (inverse of idle)
-                          }),
+                          x: chartData.cpu?.map(d => d.x) || [],
+                          y: chartData.cpu?.map(d => d.y) || [],
                           name: 'Average CPU %',
                           type: 'scatter',
                           mode: 'lines',
                           line: { color: '#1f77b4', width: 2 },
-                          hovertemplate: '%{y:.1f}%<extra></extra>'
-                        }, {
-                          x: Array.from({length: 20}, (_, i) => new Date(Date.now() - (19-i) * 60000)),
-                          y: Array.from({length: 20}, () => {
-                            // Simulate: 100 - (min by (instance) (rate(node_cpu_seconds_total{mode="idle"})))
-                            return 100 - (Math.random() * 15 + 60); // 25-40% CPU usage (max utilization)
-                          }),
-                          name: 'Max CPU %',
-                          type: 'scatter',
-                          mode: 'lines',
-                          line: { color: '#ff7f0e', width: 2 },
-                          hovertemplate: '%{y:.1f}%<extra></extra>'
-                        }, {
-                          x: Array.from({length: 20}, (_, i) => new Date(Date.now() - (19-i) * 60000)),
-                          y: Array.from({length: 20}, () => {
-                            // Simulate: 100 - (max by (instance) (rate(node_cpu_seconds_total{mode="idle"})))
-                            return 100 - (Math.random() * 25 + 75); // 0-25% CPU usage (min utilization)
-                          }),
-                          name: 'Min CPU %',
-                          type: 'scatter',
-                          mode: 'lines',
-                          line: { color: '#2ca02c', width: 2 },
                           hovertemplate: '%{y:.1f}%<extra></extra>'
                         }]}
                         layout={{
@@ -360,7 +368,17 @@ export function MetricsTab({ service }: MetricsTabProps) {
                             font: { color: '#9ca3af' }
                           }
                         }}
-                        config={{ displayModeBar: false }}
+                        config={{ 
+                          displayModeBar: false,
+                          staticPlot: false,
+                          scrollZoom: false,
+                          doubleClick: false,
+                          showTips: true,
+                          displaylogo: false,
+                          responsive: true,
+                          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d'],
+                          autosizable: true
+                        }}
                         style={{ width: '100%', height: '350px' }}
                       />
                     </CardContent>
@@ -373,50 +391,43 @@ export function MetricsTab({ service }: MetricsTabProps) {
                     </CardHeader>
                     <CardContent>
                       <Plot
-                      data={(() => {
-                          // Use real HTTP metrics if available, but ensure it's an array
-                          const httpMetrics = Array.isArray(gatewayMetrics.metrics.http) ? gatewayMetrics.metrics.http : [];
-                          const status200Metrics = httpMetrics.filter(m => m.name?.includes('200') || m.displayName?.includes('200'));
-                          const status5xxMetrics = httpMetrics.filter(m => m.name?.includes('5') || m.displayName?.includes('5xx'));
-                          
-                          const base200 = status200Metrics.reduce((sum, m) => sum + (m.value || 0), 0) || 100;
-                          const base5xx = status5xxMetrics.reduce((sum, m) => sum + (m.value || 0), 0) || 5;
-                          
-                          return [{
-                            x: Array.from({length: 15}, (_, i) => new Date(Date.now() - (14-i) * 30000)),
-                            y: Array.from({length: 15}, (_, i) => {
-                              const variance = Math.sin(i * 0.4) * 20;
-                              return Math.max(0, base200 + variance);
-                            }),
-                            name: '200',
-                            type: 'scatter',
-                            mode: 'lines',
-                            line: { color: '#10b981', width: 2 },
-                            hovertemplate: '%{y:.0f} requests<extra></extra>'
-                          }, {
-                            x: Array.from({length: 15}, (_, i) => new Date(Date.now() - (14-i) * 30000)),
-                            y: Array.from({length: 15}, (_, i) => {
-                              const variance = Math.sin(i * 0.6) * 2;
-                              return Math.max(0, base5xx + variance);
-                            }),
-                            name: '5xx',
-                            type: 'scatter',
-                            mode: 'lines',
-                            line: { color: '#ef4444', width: 2 },
-                            hovertemplate: '%{y:.0f} errors<extra></extra>'
-                          }];
-                        })()}
+                      data={[{
+                        x: chartData.requests200?.map(d => d.x) || [],
+                        y: chartData.requests200?.map(d => d.y) || [],
+                        name: '200',
+                        type: 'scatter',
+                        mode: 'lines',
+                        line: { color: '#10b981', width: 2 },
+                        hovertemplate: '%{y:.0f} requests<extra></extra>'
+                      }, {
+                        x: chartData.requests5xx?.map(d => d.x) || [],
+                        y: chartData.requests5xx?.map(d => d.y) || [],
+                        name: '5xx',
+                        type: 'scatter',
+                        mode: 'lines',
+                        line: { color: '#ef4444', width: 2 },
+                        hovertemplate: '%{y:.0f} errors<extra></extra>'
+                      }]}
                         layout={{
                           height: 350,
                           margin: { l: 40, r: 20, t: 20, b: 40 },
                           plot_bgcolor: 'transparent',
                           paper_bgcolor: 'transparent',
                           font: { color: '#9ca3af', size: 12 },
-                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' },
+                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', fixedrange: true },
                           yaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' },
                           legend: { x: 0, y: 1, bgcolor: 'transparent', bordercolor: 'transparent' }
                         }}
-                        config={{ displayModeBar: false }}
+                        config={{ 
+                          displayModeBar: false,
+                          staticPlot: false,
+                          scrollZoom: false,
+                          doubleClick: false,
+                          showTips: true,
+                          displaylogo: false,
+                          responsive: true,
+                          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d']
+                        }}
                         style={{ width: '100%', height: '350px' }}
                       />
                     </CardContent>
@@ -430,15 +441,15 @@ export function MetricsTab({ service }: MetricsTabProps) {
                     <CardContent>
                       <Plot
                         data={[{
-                          x: Array.from({length: 10}, (_, i) => new Date(Date.now() - (9-i) * 30000)),
-                          y: Array.from({length: 10}, () => Math.random() * 50 + 100),
+                          x: chartData.arnsResolution?.p50?.map(d => d.x) || [],
+                          y: chartData.arnsResolution?.p50?.map(d => d.y) || [],
                           name: '50th percentile',
                           type: 'scatter',
                           mode: 'lines',
                           line: { color: '#06b6d4', width: 2 }
                         }, {
-                          x: Array.from({length: 10}, (_, i) => new Date(Date.now() - (9-i) * 30000)),
-                          y: Array.from({length: 10}, () => Math.random() * 100 + 200),
+                          x: chartData.arnsResolution?.p99?.map(d => d.x) || [],
+                          y: chartData.arnsResolution?.p99?.map(d => d.y) || [],
                           name: '99th percentile',
                           type: 'scatter',
                           mode: 'lines',
@@ -450,11 +461,20 @@ export function MetricsTab({ service }: MetricsTabProps) {
                           plot_bgcolor: 'transparent',
                           paper_bgcolor: 'transparent',
                           font: { color: '#9ca3af', size: 12 },
-                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' },
+                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', fixedrange: true },
                           yaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', title: 'ms' },
                           legend: { x: 0, y: 1, bgcolor: 'transparent', bordercolor: 'transparent' }
                         }}
-                        config={{ displayModeBar: false }}
+                        config={{ 
+                          displayModeBar: false,
+                          staticPlot: false,
+                          scrollZoom: false,
+                          doubleClick: false,
+                          showTips: true,
+                          displaylogo: false,
+                          responsive: true,
+                          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d']
+                        }}
                         style={{ width: '100%', height: '350px' }}
                       />
                     </CardContent>
@@ -468,8 +488,8 @@ export function MetricsTab({ service }: MetricsTabProps) {
                     <CardContent>
                       <Plot
                         data={[{
-                          x: Array.from({length: 10}, (_, i) => new Date(Date.now() - (9-i) * 30000)),
-                          y: Array.from({length: 10}, () => Math.random() * 20 + 75),
+                          x: chartData.cacheHitRate?.map(d => d.x) || [],
+                          y: chartData.cacheHitRate?.map(d => d.y) || [],
                           name: 'ArNS Cache Hit Rate',
                           type: 'scatter',
                           mode: 'lines',
@@ -483,11 +503,20 @@ export function MetricsTab({ service }: MetricsTabProps) {
                           plot_bgcolor: 'transparent',
                           paper_bgcolor: 'transparent',
                           font: { color: '#9ca3af', size: 12 },
-                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' },
+                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', fixedrange: true },
                           yaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', title: '%' },
                           legend: { x: 0, y: 1, bgcolor: 'transparent', bordercolor: 'transparent' }
                         }}
-                        config={{ displayModeBar: false }}
+                        config={{ 
+                          displayModeBar: false,
+                          staticPlot: false,
+                          scrollZoom: false,
+                          doubleClick: false,
+                          showTips: true,
+                          displaylogo: false,
+                          responsive: true,
+                          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d']
+                        }}
                         style={{ width: '100%', height: '350px' }}
                       />
                     </CardContent>
@@ -501,8 +530,8 @@ export function MetricsTab({ service }: MetricsTabProps) {
                     <CardContent>
                       <Plot
                         data={[{
-                          x: Array.from({length: 10}, (_, i) => new Date(Date.now() - (9-i) * 30000)),
-                          y: Array.from({length: 10}, () => Math.random() * 100 + 200),
+                          x: chartData.responseTime?.map(d => d.x) || [],
+                          y: chartData.responseTime?.map(d => d.y) || [],
                           name: 'Average Response Time (ms)',
                           type: 'scatter',
                           mode: 'lines',
@@ -514,10 +543,19 @@ export function MetricsTab({ service }: MetricsTabProps) {
                           plot_bgcolor: 'transparent',
                           paper_bgcolor: 'transparent',
                           font: { color: '#9ca3af', size: 12 },
-                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' },
-                          yaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', title: 'ms' }
+                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', fixedrange: true },
+                          yaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', title: 'ms', fixedrange: true }
                         }}
-                        config={{ displayModeBar: false }}
+                        config={{ 
+                          displayModeBar: false,
+                          staticPlot: false,
+                          scrollZoom: false,
+                          doubleClick: false,
+                          showTips: true,
+                          displaylogo: false,
+                          responsive: true,
+                          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d']
+                        }}
                         style={{ width: '100%', height: '350px' }}
                       />
                     </CardContent>
@@ -531,8 +569,8 @@ export function MetricsTab({ service }: MetricsTabProps) {
                     <CardContent>
                       <Plot
                         data={[{
-                          x: Array.from({length: 10}, (_, i) => new Date(Date.now() - (9-i) * 30000)),
-                          y: Array.from({length: 10}, () => Math.random() * 20 + 10),
+                          x: chartData.graphqlRequests?.map(d => d.x) || [],
+                          y: chartData.graphqlRequests?.map(d => d.y) || [],
                           name: '200',
                           type: 'scatter',
                           mode: 'lines',
@@ -544,10 +582,19 @@ export function MetricsTab({ service }: MetricsTabProps) {
                           plot_bgcolor: 'transparent',
                           paper_bgcolor: 'transparent',
                           font: { color: '#9ca3af', size: 12 },
-                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' },
+                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', fixedrange: true },
                           yaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' }
                         }}
-                        config={{ displayModeBar: false }}
+                        config={{ 
+                          displayModeBar: false,
+                          staticPlot: false,
+                          scrollZoom: false,
+                          doubleClick: false,
+                          showTips: true,
+                          displaylogo: false,
+                          responsive: true,
+                          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d']
+                        }}
                         style={{ width: '100%', height: '350px' }}
                       />
                     </CardContent>
@@ -561,8 +608,8 @@ export function MetricsTab({ service }: MetricsTabProps) {
                     <CardContent>
                       <Plot
                         data={[{
-                          x: Array.from({length: 10}, (_, i) => new Date(Date.now() - (9-i) * 30000)),
-                          y: Array.from({length: 10}, () => Math.random() * 10 + 45),
+                          x: chartData.fsUsage?.map(d => d.x) || [],
+                          y: chartData.fsUsage?.map(d => d.y) || [],
                           name: 'File System Usage %',
                           type: 'scatter',
                           mode: 'lines',
@@ -574,10 +621,19 @@ export function MetricsTab({ service }: MetricsTabProps) {
                           plot_bgcolor: 'transparent',
                           paper_bgcolor: 'transparent',
                           font: { color: '#9ca3af', size: 12 },
-                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' },
-                          yaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', title: '%' }
+                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', fixedrange: true },
+                          yaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', title: '%', fixedrange: true }
                         }}
-                        config={{ displayModeBar: false }}
+                        config={{ 
+                          displayModeBar: false,
+                          staticPlot: false,
+                          scrollZoom: false,
+                          doubleClick: false,
+                          showTips: true,
+                          displaylogo: false,
+                          responsive: true,
+                          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d']
+                        }}
                         style={{ width: '100%', height: '350px' }}
                       />
                     </CardContent>
@@ -591,15 +647,15 @@ export function MetricsTab({ service }: MetricsTabProps) {
                     <CardContent>
                       <Plot
                         data={[{
-                          x: Array.from({length: 10}, (_, i) => new Date(Date.now() - (9-i) * 30000)),
-                          y: Array.from({length: 10}, () => Math.random() * 1000000 + 500000),
+                          x: chartData.ioRead?.map(d => d.x) || [],
+                          y: chartData.ioRead?.map(d => d.y) || [],
                           name: 'IO - read (bytes/sec)',
                           type: 'scatter',
                           mode: 'lines',
                           line: { color: '#10b981', width: 2 }
                         }, {
-                          x: Array.from({length: 10}, (_, i) => new Date(Date.now() - (9-i) * 30000)),
-                          y: Array.from({length: 10}, () => Math.random() * 800000 + 300000),
+                          x: chartData.ioWrite?.map(d => d.x) || [],
+                          y: chartData.ioWrite?.map(d => d.y) || [],
                           name: 'IO - write (bytes/sec)',
                           type: 'scatter',
                           mode: 'lines',
@@ -611,11 +667,20 @@ export function MetricsTab({ service }: MetricsTabProps) {
                           plot_bgcolor: 'transparent',
                           paper_bgcolor: 'transparent',
                           font: { color: '#9ca3af', size: 12 },
-                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' },
+                          xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', fixedrange: true },
                           yaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', title: 'bytes/sec' },
                           legend: { x: 0, y: 1, bgcolor: 'transparent', bordercolor: 'transparent' }
                         }}
-                        config={{ displayModeBar: false }}
+                        config={{ 
+                          displayModeBar: false,
+                          staticPlot: false,
+                          scrollZoom: false,
+                          doubleClick: false,
+                          showTips: true,
+                          displaylogo: false,
+                          responsive: true,
+                          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d']
+                        }}
                         style={{ width: '100%', height: '350px' }}
                       />
                     </CardContent>
