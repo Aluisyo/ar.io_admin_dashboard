@@ -434,7 +434,7 @@ export async function POST(request: Request) {
         updateSteps.push('Building services from source (core service)')
         
         console.log('Starting Docker build process...')
-        const dockerBuildCommand = `cd "${arIoNodePath}" && docker compose -f docker-compose.yaml build --progress plain`
+        const dockerBuildCommand = `cd "${arIoNodePath}" && docker compose --progress plain -f docker-compose.yaml build`
         console.log('Build command:', dockerBuildCommand)
         
         const buildStartTime = Date.now()
@@ -472,7 +472,7 @@ export async function POST(request: Request) {
         console.log('Starting fallback Docker build process...')
         console.log('Build command will run with 10-minute timeout')
         
-        const dockerBuildCommand = `cd "${arIoNodePath}" && docker compose -f docker-compose.yaml build --progress plain`
+        const dockerBuildCommand = `cd "${arIoNodePath}" && docker compose --progress plain -f docker-compose.yaml build`
         console.log('Executing:', dockerBuildCommand)
         
         const buildStartTime = Date.now()
