@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import Image from 'next/image'
 import { signIn, getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { AR_IO_LOGO_BASE64 } from '@/lib/constants'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -54,7 +55,7 @@ export default function LoginPage() {
           <div className="flex justify-center mb-4">
             <div className="flex items-center space-x-3">
               <Image 
-                src="/ar-io-logo.png" 
+                src={AR_IO_LOGO_BASE64}
                 alt="AR.IO" 
                 width={48} 
                 height={48} 

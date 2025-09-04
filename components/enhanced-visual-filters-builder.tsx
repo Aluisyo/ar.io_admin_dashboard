@@ -37,6 +37,7 @@ import {
   generateRuleId, 
   validateFilter 
 } from '@/lib/filter-utils'
+import { getApiUrl } from '@/lib/api-utils'
 
 interface EnhancedVisualFiltersBuilderProps {
   service: string
@@ -79,7 +80,7 @@ export function EnhancedVisualFiltersBuilder({ service }: EnhancedVisualFiltersB
   const fetchFilters = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/filters')
+      const response = await fetch(getApiUrl('/filters'))
       if (response.ok) {
         const data = await response.json()
         console.log('API Response data:', data)
@@ -335,7 +336,7 @@ export function EnhancedVisualFiltersBuilder({ service }: EnhancedVisualFiltersB
         return
       }
       
-      const response = await fetch('/api/filters', {
+      const response = await fetch(getApiUrl('/filters'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(filterData)

@@ -66,6 +66,7 @@ export function MetricsTab({ service }: MetricsTabProps) {
         if (response.ok) {
           const data = await response.json()
           setMetrics(data)
+          updateChartData(data, gatewayMetrics)
         }
       } catch (error) {
         console.error('Failed to fetch container metrics:', error)
@@ -80,6 +81,7 @@ export function MetricsTab({ service }: MetricsTabProps) {
         if (response.ok) {
           const data = await response.json()
           setGatewayMetrics(data)
+          updateChartData(metrics, data)
 
           // Add new data to history
           if (data.available && data.metrics) {
@@ -108,27 +110,150 @@ export function MetricsTab({ service }: MetricsTabProps) {
         })
       }
     }
-
-    fetchMetrics()
-    fetchGatewayMetrics()
     
-    // Generate stable chart data initially
-    setChartData({
-      memory: generateStableChartData(60, 20, 8),
-      cpu: generateStableChartData(25, 20, 10),
-      requests200: generateStableChartData(100, 15, 20),
-      requests5xx: generateStableChartData(5, 15, 2),
-      arnsResolution: {
-        p50: generateStableChartData(120, 10, 25),
-        p99: generateStableChartData(250, 10, 50)
-      },
-      responseTime: generateStableChartData(200, 10, 40),
-      fsUsage: generateStableChartData(50, 10, 5),
-      ioRead: generateStableChartData(750000, 10, 200000),
-      ioWrite: generateStableChartData(550000, 10, 150000),
-      cacheHitRate: generateStableChartData(85, 10, 8),
-      graphqlRequests: generateStableChartData(15, 10, 5)
-    })
+    const updateChartData = (containerMetrics: ContainerMetrics | null, gatewayData: GatewayMetrics | null) => {
+      const now = new Date()
+      
+      setChartData(prevData => {
+        const newData = { ...prevData }
+        
+        // Update memory and CPU with real container metrics
+        if (containerMetrics) {
+          // Update historical data (keep last 20 points)
+          const existingMemory = prevData.memory || []
+          const existingCpu = prevData.cpu || []
+          
+          newData.memory = [...existingMemory, { x: now, y: containerMetrics.memory }].slice(-20)
+          newData.cpu = [...existingCpu, { x: now, y: containerMetrics.cpu }].slice(-20)
+          
+          // File system usage from storage metric
+          const existingFsUsage = prevData.fsUsage || []
+          newData.fsUsage = [...existingFsUsage, { x: now, y: containerMetrics.storage }].slice(-20)
+        }
+        
+        // Update gateway metrics if available
+        if (gatewayData?.available && gatewayData.metrics) {
+          // HTTP Request counts
+          if (gatewayData.metrics.http && Array.isArray(gatewayData.metrics.http)) {
+            const requests200Metric = gatewayData.metrics.http.find((m: any) => 
+              m.name?.includes('2xx') || (m.name?.includes('http_requests') && m.name?.includes('200'))
+            )
+            const requests5xxMetric = gatewayData.metrics.http.find((m: any) => 
+              m.name?.includes('5xx') || (m.name?.includes('http_requests') && m.name?.includes('500'))
+            )
+            
+            const existing200 = prevData.requests200 || []
+            const existing5xx = prevData.requests5xx || []
+            
+            newData.requests200 = [...existing200, { 
+              x: now, 
+              y: requests200Metric ? requests200Metric.value : 100 
+            }].slice(-15)
+            
+            newData.requests5xx = [...existing5xx, { 
+              x: now, 
+              y: requests5xxMetric ? requests5xxMetric.value : 5 
+            }].slice(-15)
+            
+            // Response time from HTTP metrics
+            const responseTimeMetric = gatewayData.metrics.http.find((m: any) => 
+              m.name?.includes('duration') || m.name?.includes('response_time') || m.name?.includes('latency')
+            )
+            
+            const existingResponseTime = prevData.responseTime || []
+            let responseTime = 200 // Default fallback
+            if (responseTimeMetric) {
+              responseTime = responseTimeMetric.value > 10 ? responseTimeMetric.value : responseTimeMetric.value * 1000
+            }
+            
+            newData.responseTime = [...existingResponseTime, { x: now, y: responseTime }].slice(-10)
+            
+            // GraphQL requests 
+            const graphqlMetric = gatewayData.metrics.http.find((m: any) => 
+              m.name?.toLowerCase().includes('graphql') || m.name?.includes('gql')
+            )
+            const existingGraphql = prevData.graphqlRequests || []
+            newData.graphqlRequests = [...existingGraphql, { 
+              x: now, 
+              y: graphqlMetric ? graphqlMetric.value : 15 
+            }].slice(-10)
+          }
+          
+          // ArNS metrics
+          if (gatewayData.metrics.arns && Array.isArray(gatewayData.metrics.arns)) {
+            // ArNS Resolution times
+            const p50Metric = gatewayData.metrics.arns.find((m: any) => 
+              m.name?.includes('resolution_time') && m.name?.includes('p50')
+            )
+            const p99Metric = gatewayData.metrics.arns.find((m: any) => 
+              m.name?.includes('resolution_time') && (m.name?.includes('p99') || m.name?.includes('p95'))
+            )
+            
+            const existingP50 = prevData.arnsResolution?.p50 || []
+            const existingP99 = prevData.arnsResolution?.p99 || []
+            
+            const p50Value = p50Metric ? p50Metric.value * 1000 : 120 // Convert to ms
+            const p99Value = p99Metric ? p99Metric.value * 1000 : 250 // Convert to ms
+            
+            newData.arnsResolution = {
+              p50: [...existingP50, { x: now, y: p50Value }].slice(-10),
+              p99: [...existingP99, { x: now, y: p99Value }].slice(-10)
+            }
+            
+            // Cache hit rate
+            const cacheHitMetric = gatewayData.metrics.arns.find((m: any) => 
+              m.name?.includes('cache') && m.name?.includes('hit')
+            )
+            const existingCacheHit = prevData.cacheHitRate || []
+            let hitRate = 85 // Default
+            if (cacheHitMetric) {
+              hitRate = cacheHitMetric.value * 100 // Convert to percentage
+            }
+            
+            newData.cacheHitRate = [...existingCacheHit, { 
+              x: now, 
+              y: Math.min(100, Math.max(0, hitRate)) 
+            }].slice(-10)
+          }
+          
+          // I/O metrics
+          const ioReadValue = 750000  // Default fallback
+          const ioWriteValue = 550000 // Default fallback
+          
+          if (gatewayData.metrics.ario && Array.isArray(gatewayData.metrics.ario)) {
+            const ioReadMetric = gatewayData.metrics.ario.find((m: any) => 
+              m.name?.includes('io_read') || m.name?.includes('disk_read')
+            )
+            const ioWriteMetric = gatewayData.metrics.ario.find((m: any) => 
+              m.name?.includes('io_write') || m.name?.includes('disk_write')
+            )
+            
+            const existingIoRead = prevData.ioRead || []
+            const existingIoWrite = prevData.ioWrite || []
+            
+            newData.ioRead = [...existingIoRead, { 
+              x: now, 
+              y: ioReadMetric ? ioReadMetric.value : ioReadValue 
+            }].slice(-10)
+            
+            newData.ioWrite = [...existingIoWrite, { 
+              x: now, 
+              y: ioWriteMetric ? ioWriteMetric.value : ioWriteValue 
+            }].slice(-10)
+          }
+        }
+        
+        return newData
+      })
+    }
+
+    const initializeData = async () => {
+      await fetchMetrics()
+      await fetchGatewayMetrics()
+      updateChartData(metrics, gatewayMetrics)
+    }
+    
+    initializeData()
     
     const interval = setInterval(() => {
       fetchMetrics()
@@ -251,7 +376,7 @@ export function MetricsTab({ service }: MetricsTabProps) {
                 
                 <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
                   {/* 1. Last Height Imported - Stat Panel */}
-                  {gatewayMetrics.metrics.ario?.find((m: any) => m.name === 'last_height_imported') && (
+                  {gatewayMetrics.metrics.ario && Array.isArray(gatewayMetrics.metrics.ario) && gatewayMetrics.metrics.ario.find((m: any) => m.name === 'last_height_imported') && (
                     <Card className="bg-gray-800 border-gray-700 md:col-span-2 lg:col-span-1">
                       <CardHeader>
                         <CardTitle className="text-white text-lg">Last Height Imported</CardTitle>
@@ -321,6 +446,7 @@ export function MetricsTab({ service }: MetricsTabProps) {
                           autosizable: true
                         }}
                         style={{ width: '100%', height: '350px' }}
+                        useResizeHandler={true}
                       />
                     </CardContent>
                   </Card>
@@ -380,6 +506,7 @@ export function MetricsTab({ service }: MetricsTabProps) {
                           autosizable: true
                         }}
                         style={{ width: '100%', height: '350px' }}
+                        useResizeHandler={true}
                       />
                     </CardContent>
                   </Card>
@@ -429,6 +556,7 @@ export function MetricsTab({ service }: MetricsTabProps) {
                           modeBarButtonsToRemove: ['pan2d','select2d','lasso2d']
                         }}
                         style={{ width: '100%', height: '350px' }}
+                        useResizeHandler={true}
                       />
                     </CardContent>
                   </Card>
@@ -476,6 +604,7 @@ export function MetricsTab({ service }: MetricsTabProps) {
                           modeBarButtonsToRemove: ['pan2d','select2d','lasso2d']
                         }}
                         style={{ width: '100%', height: '350px' }}
+                        useResizeHandler={true}
                       />
                     </CardContent>
                   </Card>
@@ -518,6 +647,7 @@ export function MetricsTab({ service }: MetricsTabProps) {
                           modeBarButtonsToRemove: ['pan2d','select2d','lasso2d']
                         }}
                         style={{ width: '100%', height: '350px' }}
+                        useResizeHandler={true}
                       />
                     </CardContent>
                   </Card>
@@ -557,6 +687,7 @@ export function MetricsTab({ service }: MetricsTabProps) {
                           modeBarButtonsToRemove: ['pan2d','select2d','lasso2d']
                         }}
                         style={{ width: '100%', height: '350px' }}
+                        useResizeHandler={true}
                       />
                     </CardContent>
                   </Card>
@@ -596,6 +727,7 @@ export function MetricsTab({ service }: MetricsTabProps) {
                           modeBarButtonsToRemove: ['pan2d','select2d','lasso2d']
                         }}
                         style={{ width: '100%', height: '350px' }}
+                        useResizeHandler={true}
                       />
                     </CardContent>
                   </Card>
@@ -635,6 +767,7 @@ export function MetricsTab({ service }: MetricsTabProps) {
                           modeBarButtonsToRemove: ['pan2d','select2d','lasso2d']
                         }}
                         style={{ width: '100%', height: '350px' }}
+                        useResizeHandler={true}
                       />
                     </CardContent>
                   </Card>
@@ -682,6 +815,7 @@ export function MetricsTab({ service }: MetricsTabProps) {
                           modeBarButtonsToRemove: ['pan2d','select2d','lasso2d']
                         }}
                         style={{ width: '100%', height: '350px' }}
+                        useResizeHandler={true}
                       />
                     </CardContent>
                   </Card>

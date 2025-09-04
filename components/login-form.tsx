@@ -10,7 +10,7 @@ import { User } from 'lucide-react'
 import Image from 'next/image'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { getPublicAssetUrl } from '@/lib/base-path'
+import { AR_IO_LOGO_BASE64 } from '@/lib/constants'
 
 interface LoginFormProps {
   onLogin: () => void
@@ -55,7 +55,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
           <div className="flex justify-center mb-4">
             <div className="flex items-center space-x-3">
               <Image 
-                src={getPublicAssetUrl('/ar-io-logo.png')}
+                src={AR_IO_LOGO_BASE64}
                 alt="AR.IO" 
                 width={48} 
                 height={48} 

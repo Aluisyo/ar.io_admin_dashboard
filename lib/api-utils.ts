@@ -4,18 +4,48 @@
 
 /**
  * Constructs API URLs with proper base path support for reverse proxy deployments
- * @param path - The API path (e.g., '/api/docker/containers')
+ * @param path - The API path (e.g., '/docker/containers' or '/api/docker/containers')
  * @returns The complete API URL with base path if configured
  */
 export function getApiUrl(path: string): string {
-  // Get the base path from Next.js public env var
+  // Ensure path starts with /
+  let normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  
+  // If path doesn't start with /api, prepend it
+  if (!normalizedPath.startsWith('/api/')) {
+    normalizedPath = `/api${normalizedPath}`;
+  }
+  
+  // Get the base path from environment variable
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
   
+  // In some deployment configurations (like reverse proxies), 
+  // API routes need to be prefixed with the base path as well
+  if (basePath) {
+    return `${basePath}${normalizedPath}`;
+  }
+  
+  return normalizedPath;
+}
+
+/**
+ * Constructs static asset URLs with proper base path support
+ * @param path - The static asset path (e.g., '/manifest.json')
+ * @returns The complete asset URL with base path if configured
+ */
+export function getAssetUrl(path: string): string {
   // Ensure path starts with /
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   
-  // Combine base path with API path
-  return `${basePath}${normalizedPath}`;
+  // Get the base path from environment variable
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+  
+  // Static assets need to be prefixed with base path in some deployments
+  if (basePath) {
+    return `${basePath}${normalizedPath}`;
+  }
+  
+  return normalizedPath;
 }
 
 /**

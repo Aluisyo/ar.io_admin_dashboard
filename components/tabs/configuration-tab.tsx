@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Save, RefreshCw, PlusCircle, Trash2, Info } from 'lucide-react'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { getApiUrl } from '@/lib/api-utils'
 
 interface ConfigVar {
   id: number;
@@ -87,7 +88,7 @@ export function ConfigurationTab({ service }: ConfigurationTabProps) {
     setMessage('');
     try {
       const configFile = getConfigFile(service);
-      const response = await fetch(`/api/config/${service}?file=${configFile}`);
+      const response = await fetch(getApiUrl(`/api/config/${service}?file=${configFile}`));
       if (response.ok) {
         const data: Record<string, string> = await response.json();
         const parsedVars: ConfigVar[] = Object.entries(data).map(([key, value], index) => ({
@@ -127,7 +128,7 @@ export function ConfigurationTab({ service }: ConfigurationTabProps) {
       });
 
       const configFile = getConfigFile(service);
-      const response = await fetch(`/api/config/${service}?file=${configFile}`, {
+      const response = await fetch(getApiUrl(`/api/config/${service}?file=${configFile}`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

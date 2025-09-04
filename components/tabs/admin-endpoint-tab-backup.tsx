@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useState, useEffect } from 'react'
+import { getApiUrl } from '@/lib/api-utils'
 
 interface AdminEndpointTabProps {
   service: string
@@ -87,7 +88,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
     // Auto-detect Gateway URL
     const autoDetectGatewayUrl = async () => {
       try {
-        const response = await fetch('/api/gateway-url', { credentials: 'include' });
+        const response = await fetch(getApiUrl('/gateway-url'), { credentials: 'include' });
         if (response.ok) {
           const data = await response.json();
           setGatewayUrl(data.gatewayUrl);
@@ -111,7 +112,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
     // Fetch ADMIN_API_KEY from server
     const fetchAdminApiKey = async () => {
       try {
-        const response = await fetch('/api/admin-api-key', { credentials: 'include' });
+        const response = await fetch(getApiUrl('/admin-api-key'), { credentials: 'include' });
         if (response.ok) {
           const data = await response.json();
           setAdminApiKey(data.adminApiKey);
@@ -140,7 +141,7 @@ export function AdminEndpointTab({ service }: AdminEndpointTabProps) {
       ...body
     };
 
-    const response = await fetch(`/api/ar-io-admin/${endpoint}`, { credentials: 'include',
+    const response = await fetch(getApiUrl(`/ar-io-admin/${endpoint}`), { credentials: 'include',
       method: 'POST', // All client-side calls to our Next.js API are POST
       headers: {
         'Content-Type': 'application/json',

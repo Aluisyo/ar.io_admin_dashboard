@@ -1,10 +1,12 @@
+import { getApiUrl } from './api-utils';
+
 // Utility function to add notifications
 export async function addNotification(
   message: string, 
   type: 'warning' | 'success' | 'error' | 'info' | 'debug'
 ) {
   try {
-    const response = await fetch('/api/notifications', {
+    const response = await fetch(getApiUrl('/notifications'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

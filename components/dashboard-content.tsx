@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { Progress } from '@/components/ui/progress'
@@ -55,43 +55,16 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
   const [forceUpdate, setForceUpdate] = useState(false)
   const [handleChanges, setHandleChanges] = useState<'stash' | 'reset' | 'backup'>('stash')
   
-  // Generate stable chart data only once to prevent jitter
-  const [chartData] = useState(() => {
-    const generateStableChartData = (baseValue: number, points: number = 20, variance: number = 5, seed: number = 0) => {
-      const data = []
-      for (let i = 0; i < points; i++) {
-        const timeOffset = (points - 1 - i) * 60000
-        // Use seed to make data deterministic but varied
-        const noise = (Math.sin((i + seed) * 0.3) + Math.cos((i + seed) * 0.5)) * variance
-        data.push({
-          x: new Date(Date.now() - timeOffset),
-          y: Math.max(0, Math.min(100, baseValue + noise))
-        })
-      }
-      return data
-    }
-    
-    return {
-      memory: generateStableChartData(60, 20, 8, 1),
-      cpu: generateStableChartData(25, 20, 10, 2),
-      arnsResolution: {
-        p50: generateStableChartData(120, 10, 25, 3),
-        p99: generateStableChartData(250, 10, 50, 4)
-      },
-      responseTime: generateStableChartData(200, 10, 40, 5),
-      cacheHitRate: generateStableChartData(85, 10, 8, 6),
-      graphqlRequests: generateStableChartData(15, 10, 5, 7),
-      fsUsage: generateStableChartData(50, 10, 5, 8),
-      ioRead: Array.from({length: 10}, (_, i) => ({
-        x: new Date(Date.now() - (9-i) * 30000),
-        y: 750000 + Math.sin((i + 9) * 0.3) * 200000
-      })),
-      ioWrite: Array.from({length: 10}, (_, i) => ({
-        x: new Date(Date.now() - (9-i) * 30000),
-        y: 550000 + Math.sin((i + 10) * 0.4) * 150000
-      }))
-    }
-  })
+  // Store historical data points for real-time charts
+  const [historicalData, setHistoricalData] = useState<{
+    timestamps: Date[],
+    memory: number[],
+    cpu: number[],
+    storage: number[]
+  }>({ timestamps: [], memory: [], cpu: [], storage: []})  
+  
+  // State for real-time chart data
+  const [chartData, setChartData] = useState<Record<string, any>>({})  
   
   const nonAdminServices = services.filter(s => s.serviceId !== 'admin')
   const runningServices = services.filter(s => s.status === 'running').length
@@ -99,61 +72,234 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
   const stoppedNonAdminServices = nonAdminServices.filter(s => s.status === 'stopped').length
   const shouldShowStartAll = runningNonAdminServices === 0 && stoppedNonAdminServices > 0
   
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await apiGet('/api/system/stats')
-        if (response.ok) {
-          const data = await response.json()
-          setStats(data)
-        }
-      } catch (error) {
-        console.error('Failed to fetch system stats:', error)
-      }
-    }
-
-    const fetchServices = async () => {
-      try {
-        const response = await apiGet('/api/docker/containers')
-        if (response.ok) {
-          const data = await response.json()
-          setServices(data)
-        }
-      } catch (error) {
-        console.error('Failed to fetch services:', error)
-      }
-    }
-
-    const fetchPrometheusMetrics = async () => {
-      try {
-        const response = await apiGet('/api/prometheus/metrics')
-        if (response.ok) {
-          const data = await response.json()
-          console.log('Prometheus metrics data:', data)
-          console.log('Metrics available:', data.available)
-          console.log('Metrics count:', data.metricsCount)
-          console.log('Metrics object keys:', Object.keys(data.metrics || {}))
-          setPrometheusMetrics(data)
-        } else {
-          const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }))
-          console.error('Prometheus API error:', response.status, errorData)
-          setPrometheusMetrics({
-            available: false,
-            error: errorData.error || `HTTP ${response.status}`,
-            details: errorData.details || response.statusText
-          })
-        }
-      } catch (error) {
-        console.error('Failed to fetch Prometheus metrics:', error)
-        setPrometheusMetrics({
-          available: false,
-          error: 'Network error',
-          details: error instanceof Error ? error.message : 'Unknown error'
+  // Move fetch functions to component scope so they can be accessed by other functions
+  // Use useCallback to prevent infinite re-renders in useEffect
+  const fetchStats = useCallback(async () => {
+    try {
+      const response = await apiGet('/api/system/stats')
+      if (response.ok) {
+        const data = await response.json()
+        setStats(data)
+        
+        // Update historical data for real-time charts (keep last 20 points)
+        setHistoricalData(prev => {
+          const newTimestamps = [...prev.timestamps, new Date()].slice(-20)
+          const newMemory = [...prev.memory, data.memory].slice(-20)
+          const newCpu = [...prev.cpu, data.cpu].slice(-20)
+          const newStorage = [...prev.storage, data.storage].slice(-20)
+          
+          return {
+            timestamps: newTimestamps,
+            memory: newMemory,
+            cpu: newCpu,
+            storage: newStorage
+          }
         })
       }
+    } catch (error) {
+      console.error('Failed to fetch system stats:', error)
     }
+  }, [])
 
+  const fetchServices = useCallback(async () => {
+    try {
+      const response = await apiGet('/api/docker/containers')
+      if (response.ok) {
+        const data = await response.json()
+        setServices(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch services:', error)
+    }
+  }, [])
+
+  const fetchPrometheusMetrics = useCallback(async () => {
+    try {
+      const response = await apiGet('/api/prometheus/metrics')
+      if (response.ok) {
+        const data = await response.json()
+        console.log('Prometheus metrics data:', data)
+        console.log('Metrics available:', data.available)
+        console.log('Metrics count:', data.metricsCount)
+        console.log('Metrics object keys:', Object.keys(data.metrics || {}))
+        setPrometheusMetrics(data)
+        
+        // Update chart data with real-time Prometheus data
+        updateChartData(data)
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }))
+        console.error('Prometheus API error:', response.status, errorData)
+        setPrometheusMetrics({
+          available: false,
+          error: errorData.error || `HTTP ${response.status}`,
+          details: errorData.details || response.statusText
+        })
+      }
+    } catch (error) {
+      console.error('Failed to fetch Prometheus metrics:', error)
+      setPrometheusMetrics({
+        available: false,
+        error: 'Network error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  }, [])
+  
+  const updateChartData = useCallback((prometheusData: PrometheusMetrics) => {
+    const now = new Date()
+    
+    setChartData(prevData => {
+      const newData = { ...prevData }
+      
+      // Update file system usage with historical storage data
+      if (historicalData.timestamps.length > 0) {
+        newData.fsUsage = historicalData.timestamps.map((timestamp, index) => ({
+          x: timestamp,
+          y: historicalData.storage[index]
+        }))
+      }
+      
+      // Initialize other charts with placeholder data if Prometheus has metrics
+      if (prometheusData.available && prometheusData.metrics) {
+        // ArNS Resolution - use Prometheus metrics if available
+        if (prometheusData.metrics.arns && Array.isArray(prometheusData.metrics.arns)) {
+          // Look for ArNS resolution time metrics (p50, p95, p99)
+          const p50Metric = prometheusData.metrics.arns.find((m: any) => 
+            m.name?.includes('resolution_time') && m.name?.includes('p50')
+          )
+          const p99Metric = prometheusData.metrics.arns.find((m: any) => 
+            m.name?.includes('resolution_time') && (m.name?.includes('p99') || m.name?.includes('p95'))
+          )
+          
+          // Use real data if available, fallback to reasonable defaults
+          const p50Value = p50Metric ? p50Metric.value * 1000 : 150 // Convert to ms if needed
+          const p99Value = p99Metric ? p99Metric.value * 1000 : 300 // Convert to ms if needed
+          
+          // Update historical data (keep last 10 points)
+          const existingP50 = prevData.arnsResolution?.p50 || []
+          const existingP99 = prevData.arnsResolution?.p99 || []
+          
+          newData.arnsResolution = {
+            p50: [...existingP50, { x: now, y: p50Value }].slice(-10),
+            p99: [...existingP99, { x: now, y: p99Value }].slice(-10)
+          }
+        }
+        
+        // Cache hit rate from ArNS metrics
+        if (prometheusData.metrics.arns && Array.isArray(prometheusData.metrics.arns)) {
+          const cacheHitMetric = prometheusData.metrics.arns.find((m: any) => 
+            m.name?.includes('cache') && m.name?.includes('hit')
+          )
+          const cacheRatio = prometheusData.metrics.arns.find((m: any) => 
+            m.name?.includes('cache_ratio') || m.name?.includes('hit_rate')
+          )
+          
+          // Use real data if available, calculate percentage
+          let hitRate = 85 // Default fallback
+          if (cacheHitMetric) {
+            hitRate = cacheHitMetric.value * 100 // Convert to percentage
+          } else if (cacheRatio) {
+            hitRate = cacheRatio.value // Assume already percentage
+          }
+          
+          // Update historical data (keep last 10 points)
+          const existingData = prevData.cacheHitRate || []
+          newData.cacheHitRate = [...existingData, { x: now, y: Math.min(100, Math.max(0, hitRate)) }].slice(-10)
+        }
+        
+        // Response time from HTTP metrics
+        if (prometheusData.metrics.http && Array.isArray(prometheusData.metrics.http)) {
+          const responseTimeMetric = prometheusData.metrics.http.find((m: any) => 
+            m.name?.includes('duration') || m.name?.includes('response_time') || m.name?.includes('latency')
+          )
+          const httpDurationMetric = prometheusData.metrics.http.find((m: any) => 
+            m.name === 'http_request_duration_seconds' || m.name?.includes('http_duration')
+          )
+          
+          let responseTime = 200 // Default fallback in ms
+          if (responseTimeMetric) {
+            // Convert to milliseconds if needed
+            responseTime = responseTimeMetric.value > 10 ? responseTimeMetric.value : responseTimeMetric.value * 1000
+          } else if (httpDurationMetric) {
+            // Convert seconds to milliseconds
+            responseTime = httpDurationMetric.value * 1000
+          }
+          
+          // Update historical data (keep last 10 points)
+          const existingData = prevData.responseTime || []
+          newData.responseTime = [...existingData, { x: now, y: Math.max(0, responseTime) }].slice(-10)
+        }
+        
+        // GraphQL requests from HTTP metrics
+        if (prometheusData.metrics.http && Array.isArray(prometheusData.metrics.http)) {
+          const graphqlMetric = prometheusData.metrics.http.find((m: any) => 
+            m.name?.toLowerCase().includes('graphql') || m.name?.includes('gql')
+          )
+          const httpRequestsMetric = prometheusData.metrics.http.find((m: any) => 
+            m.name?.includes('http_requests_total') || (m.name?.includes('request') && m.name?.includes('total'))
+          )
+          const requestsCount = prometheusData.metrics.http.find((m: any) => 
+            m.name?.includes('requests') && !m.name?.includes('duration')
+          )
+          
+          let requestCount = 15 // Default fallback
+          if (graphqlMetric) {
+            requestCount = graphqlMetric.value
+          } else if (httpRequestsMetric) {
+            // Use a fraction of total HTTP requests as GraphQL estimate
+            requestCount = Math.round(httpRequestsMetric.value * 0.1)
+          } else if (requestsCount) {
+            requestCount = requestsCount.value
+          }
+          
+          // Update historical data (keep last 10 points)
+          const existingData = prevData.graphqlRequests || []
+          newData.graphqlRequests = [...existingData, { x: now, y: Math.max(0, requestCount) }].slice(-10)
+        }
+        
+        // I/O metrics from various sources
+        let ioReadValue = 750000  // Default fallback
+        let ioWriteValue = 550000 // Default fallback
+        
+        // Check AR.IO specific metrics first
+        if (prometheusData.metrics.ario && Array.isArray(prometheusData.metrics.ario)) {
+          const ioReadMetric = prometheusData.metrics.ario.find((m: any) => 
+            m.name?.includes('io_read') || m.name?.includes('disk_read')
+          )
+          const ioWriteMetric = prometheusData.metrics.ario.find((m: any) => 
+            m.name?.includes('io_write') || m.name?.includes('disk_write')
+          )
+          
+          if (ioReadMetric) ioReadValue = ioReadMetric.value
+          if (ioWriteMetric) ioWriteValue = ioWriteMetric.value
+        }
+        
+        // Fallback to HTTP metrics if available
+        if (prometheusData.metrics.http && Array.isArray(prometheusData.metrics.http) && ioReadValue === 750000) {
+          const networkInMetric = prometheusData.metrics.http.find((m: any) => 
+            m.name?.includes('bytes_received') || m.name?.includes('network_in')
+          )
+          const networkOutMetric = prometheusData.metrics.http.find((m: any) => 
+            m.name?.includes('bytes_sent') || m.name?.includes('network_out')
+          )
+          
+          if (networkInMetric) ioReadValue = networkInMetric.value
+          if (networkOutMetric) ioWriteValue = networkOutMetric.value
+        }
+        
+        // Update historical data (keep last 10 points)
+        const existingReadData = prevData.ioRead || []
+        const existingWriteData = prevData.ioWrite || []
+        
+        newData.ioRead = [...existingReadData, { x: now, y: Math.max(0, ioReadValue) }].slice(-10)
+        newData.ioWrite = [...existingWriteData, { x: now, y: Math.max(0, ioWriteValue) }].slice(-10)
+      }
+      
+      return newData
+    })
+  }, [historicalData])
+
+  useEffect(() => {
     fetchStats()
     fetchServices()
     fetchPrometheusMetrics()
@@ -164,7 +310,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
       fetchPrometheusMetrics()
     }, 5000)
     return () => clearInterval(interval)
-  }, [])
+  }, [fetchStats, fetchServices, fetchPrometheusMetrics])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -748,7 +894,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
             {prometheusMetrics?.available && prometheusMetrics.metrics ? (
                 <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
                   {/* 1. Last Height Imported - Stat Panel */}
-                  {prometheusMetrics.metrics.ario?.find((m: any) => m.name === 'last_height_imported') && (
+                  {prometheusMetrics.metrics.ario && Array.isArray(prometheusMetrics.metrics.ario) && prometheusMetrics.metrics.ario.find((m: any) => m.name === 'last_height_imported') && (
                     <Card className="bg-gray-800 border-gray-700 md:col-span-2 lg:col-span-1">
                       <CardHeader>
                         <CardTitle className="text-white text-lg">Last Height Imported</CardTitle>
@@ -763,22 +909,93 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                     </Card>
                   )}
                   
-                  {/* 2. Memory Utilization - Time Series */}
+                  {/* 2. Memory Utilization - Real Time */}
                   <Card className="bg-gray-800 border-gray-700">
                     <CardHeader>
-                      <CardTitle className="text-white text-lg">Memory Utilization</CardTitle>
+                      <CardTitle className="text-white text-lg">Memory Utilization (Real-Time)</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <Plot
-                        data={[{
-                          x: chartData.memory?.map(d => d.x) || [],
-                          y: chartData.memory?.map(d => d.y) || [],
-                          type: 'scatter',
-                          mode: 'lines',
-                          name: 'Memory Usage %',
-                          line: { color: '#60a5fa', width: 2 },
-                          hovertemplate: '%{y:.1f}%<extra></extra>'
-                        }]}
+                      {historicalData.timestamps.length > 0 ? (
+                        <Plot
+                          data={[{
+                            x: historicalData.timestamps,
+                            y: historicalData.memory,
+                            type: 'scatter',
+                            mode: 'lines',
+                            name: 'Memory Usage %',
+                            line: { color: '#60a5fa', width: 2 },
+                            hovertemplate: '%{y:.1f}%<extra></extra>'
+                          }]}
+                        layout={{
+                          height: 350,
+                          margin: { l: 50, r: 20, t: 20, b: 40 },
+                          plot_bgcolor: 'transparent',
+                          paper_bgcolor: 'transparent',
+                          font: { color: '#9ca3af', size: 12 },
+                          xaxis: { 
+                            showgrid: true, 
+                            gridcolor: '#374151', 
+                            color: '#9ca3af',
+                            type: 'date'
+                          },
+                          yaxis: { 
+                            showgrid: true, 
+                            gridcolor: '#374151', 
+                            color: '#9ca3af', 
+                            title: { text: 'Percent (%)', font: { color: '#9ca3af' } },
+                            range: [0, 100]
+                          },
+                          showlegend: true,
+                          legend: { 
+                            x: 0, y: 1, 
+                            bgcolor: 'transparent', 
+                            bordercolor: 'transparent',
+                            font: { color: '#9ca3af' }
+                          }
+                        }}
+                        config={{ 
+          displayModeBar: false,
+          staticPlot: false,
+          scrollZoom: false,
+          doubleClick: false,
+          showTips: true,
+          displaylogo: false,
+          responsive: true,
+          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d','zoom2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+          autosizable: true
+        }}
+                        style={{ width: '100%', height: '350px' }}
+                        useResizeHandler={true}
+                      />
+                      ) : (
+                        <div className="flex items-center justify-center h-64">
+                          <div className="text-gray-400 text-center">
+                            <div className="text-lg font-semibold mb-2">{stats.memory}%</div>
+                            <div className="text-sm">Current Memory Usage</div>
+                            <div className="text-xs mt-2">Collecting historical data...</div>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                  
+                  {/* 3. CPU Utilization - Real Time */}
+                  <Card className="bg-gray-800 border-gray-700">
+                    <CardHeader>
+                      <CardTitle className="text-white text-lg">CPU Utilization (Real-Time)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {historicalData.timestamps.length > 0 ? (
+                        <Plot
+                          data={[{
+                            x: historicalData.timestamps,
+                            y: historicalData.cpu,
+                            name: 'CPU Usage %',
+                            type: 'scatter',
+                            mode: 'lines',
+                            line: { color: '#1f77b4', width: 2 },
+                            hovertemplate: '%{y:.1f}%<extra></extra>'
+                          }]}
                         layout={{
                           height: 350,
                           margin: { l: 50, r: 20, t: 20, b: 40 },
@@ -816,166 +1033,94 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
           responsive: true,
           modeBarButtonsToRemove: ['pan2d','select2d','lasso2d','zoom2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
           autosizable: true
-        }}
-                        style={{ width: '100%', height: '350px' }}
-                      />
-                    </CardContent>
-                  </Card>
-                  
-                  {/* 3. CPU Utilization - Time Series */}
-                  <Card className="bg-gray-800 border-gray-700">
-                    <CardHeader>
-                      <CardTitle className="text-white text-lg">CPU Utilization %</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Plot
-                        data={[{
-                          x: Array.from({length: 20}, (_, i) => new Date(Date.now() - (19-i) * 60000)),
-                          y: Array.from({length: 20}, () => {
-                            // Simulate: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"})))
-                            return 100 - (Math.random() * 20 + 70); // 10-30% CPU usage (inverse of idle)
-                          }),
-                          name: 'Average CPU %',
-                          type: 'scatter',
-                          mode: 'lines',
-                          line: { color: '#1f77b4', width: 2 },
-                          hovertemplate: '%{y:.1f}%<extra></extra>'
-                        }, {
-                          x: Array.from({length: 20}, (_, i) => new Date(Date.now() - (19-i) * 60000)),
-                          y: Array.from({length: 20}, () => {
-                            // Simulate: 100 - (min by (instance) (rate(node_cpu_seconds_total{mode="idle"})))
-                            return 100 - (Math.random() * 15 + 60); // 25-40% CPU usage (max utilization)
-                          }),
-                          name: 'Max CPU %',
-                          type: 'scatter',
-                          mode: 'lines',
-                          line: { color: '#ff7f0e', width: 2 },
-                          hovertemplate: '%{y:.1f}%<extra></extra>'
-                        }, {
-                          x: Array.from({length: 20}, (_, i) => new Date(Date.now() - (19-i) * 60000)),
-                          y: Array.from({length: 20}, () => {
-                            // Simulate: 100 - (max by (instance) (rate(node_cpu_seconds_total{mode="idle"})))
-                            return 100 - (Math.random() * 25 + 75); // 0-25% CPU usage (min utilization)
-                          }),
-                          name: 'Min CPU %',
-                          type: 'scatter',
-                          mode: 'lines',
-                          line: { color: '#2ca02c', width: 2 },
-                          hovertemplate: '%{y:.1f}%<extra></extra>'
-                        }]}
-                        layout={{
-                          height: 350,
-                          margin: { l: 50, r: 20, t: 20, b: 40 },
-                          plot_bgcolor: 'transparent',
-                          paper_bgcolor: 'transparent',
-                          font: { color: '#9ca3af', size: 12 },
-                          xaxis: { 
-                            showgrid: true, 
-                            gridcolor: '#374151', 
-                            color: '#9ca3af',
-                            type: 'date'
-                          },
-                          yaxis: { 
-                            showgrid: true, 
-                            gridcolor: '#374151', 
-                            color: '#9ca3af', 
-                            title: { text: 'Percent (%)', font: { color: '#9ca3af' } },
-                            range: [0, 100]
-                          },
-                          showlegend: true,
-                          legend: { 
-                            x: 0, y: 1, 
-                            bgcolor: 'transparent', 
-                            bordercolor: 'transparent',
-                            font: { color: '#9ca3af' }
-                          }
                         }}
-        config={{ 
-          displayModeBar: false,
-          staticPlot: false,
-          scrollZoom: false,
-          doubleClick: false,
-          showTips: true,
-          displaylogo: false,
-          responsive: true,
-          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d','zoom2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
-          autosizable: true
-        }}
                         style={{ width: '100%', height: '350px' }}
-                      />
+                        useResizeHandler={true}
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-64">
+                          <div className="text-gray-400 text-center">
+                            <div className="text-lg font-semibold mb-2">{stats.cpu}%</div>
+                            <div className="text-sm">Current CPU Usage</div>
+                            <div className="text-xs mt-2">Collecting historical data...</div>
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                   
-                  {/* 4. Request Count - Time Series */}
-                  {prometheusMetrics.metrics.http && (
+                  {/* 4. HTTP Request Metrics - Bar Chart */}
+                  {prometheusMetrics.metrics.http && Array.isArray(prometheusMetrics.metrics.http) && (
                     <Card className="bg-gray-800 border-gray-700">
                       <CardHeader>
-                        <CardTitle className="text-white text-lg">Request Count</CardTitle>
+                        <CardTitle className="text-white text-lg">HTTP Request Metrics</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <Plot
-                          data={(() => {
-                            // Use real HTTP metrics if available
-                            const httpMetrics = prometheusMetrics.metrics.http || [];
-                            const status200Metrics = httpMetrics.filter(m => m.name.includes('200') || m.displayName.includes('200'));
-                            const status5xxMetrics = httpMetrics.filter(m => m.name.includes('5') || m.displayName.includes('5xx'));
-                            
-                            const base200 = status200Metrics.reduce((sum, m) => sum + (m.value || 0), 0) || 100;
-                            const base5xx = status5xxMetrics.reduce((sum, m) => sum + (m.value || 0), 0) || 5;
-                            
-                            return [{
-                              x: Array.from({length: 15}, (_, i) => new Date(Date.now() - (14-i) * 30000)),
-                              y: Array.from({length: 15}, (_, i) => {
-                                const variance = Math.sin(i * 0.4) * 20;
-                                return Math.max(0, base200 + variance);
-                              }),
-                              name: '200',
-                              type: 'scatter',
-                              mode: 'lines',
-                              line: { color: '#10b981', width: 2 },
-                              hovertemplate: '%{y:.0f} requests<extra></extra>'
-                            }, {
-                              x: Array.from({length: 15}, (_, i) => new Date(Date.now() - (14-i) * 30000)),
-                              y: Array.from({length: 15}, (_, i) => {
-                                const variance = Math.sin(i * 0.6) * 2;
-                                return Math.max(0, base5xx + variance);
-                              }),
-                              name: '5xx',
-                              type: 'scatter',
-                              mode: 'lines',
-                              line: { color: '#ef4444', width: 2 },
-                              hovertemplate: '%{y:.0f} errors<extra></extra>'
-                            }];
-                          })()}
+                          data={[{
+                            x: prometheusMetrics.metrics.http.slice(0, 8).map((metric: any) => {
+                              // Clean up metric names for better display
+                              let name = metric.displayName || metric.name || 'Unknown'
+                              if (name.includes('request_duration_seconds')) {
+                                return 'Avg Response Time'
+                              } else if (name.includes('requests_total')) {
+                                return 'Total Requests'
+                              } else if (name.includes('active_requests')) {
+                                return 'Active Requests'
+                              } else if (name.length > 20) {
+                                return name.substring(0, 17) + '...'
+                              }
+                              return name
+                            }),
+                            y: prometheusMetrics.metrics.http.slice(0, 8).map((metric: any) => 
+                              typeof metric.value === 'number' ? metric.value : 0
+                            ),
+                            type: 'bar',
+                            marker: {
+                              color: ['#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#f97316', '#84cc16', '#06b6d4']
+                            },
+                            hovertemplate: '%{x}<br>Value: %{y}<extra></extra>'
+                          }]}
                           layout={{
                             height: 350,
-                            margin: { l: 40, r: 20, t: 20, b: 40 },
+                            margin: { l: 60, r: 20, t: 20, b: 80 },
                             plot_bgcolor: 'transparent',
                             paper_bgcolor: 'transparent',
-                            font: { color: '#9ca3af', size: 12 },
-                            xaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af', fixedrange: true },
-                            yaxis: { showgrid: true, gridcolor: '#374151', color: '#9ca3af' },
-                            legend: { x: 0, y: 1, bgcolor: 'transparent', bordercolor: 'transparent' }
+                            font: { color: '#9ca3af', size: 11 },
+                            xaxis: { 
+                              showgrid: false, 
+                              color: '#9ca3af',
+                              tickangle: -45,
+                              tickfont: { size: 10 }
+                            },
+                            yaxis: { 
+                              showgrid: true, 
+                              gridcolor: '#374151', 
+                              color: '#9ca3af',
+                              title: { text: 'Value', font: { color: '#9ca3af' } }
+                            },
+                            showlegend: false
                           }}
-          config={{ 
-          displayModeBar: false,
-          staticPlot: false,
-          scrollZoom: false,
-          doubleClick: false,
-          showTips: true,
-          displaylogo: false,
-          responsive: true,
-          modeBarButtonsToRemove: ['pan2d','select2d','lasso2d','zoom2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
-          autosizable: true
-        }}
+                          config={{
+                            displayModeBar: false,
+                            staticPlot: false,
+                            scrollZoom: false,
+                            doubleClick: false,
+                            showTips: true,
+                            displaylogo: false,
+                            responsive: true,
+                            modeBarButtonsToRemove: ['pan2d','select2d','lasso2d','zoom2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+                            autosizable: true
+                          }}
                           style={{ width: '100%', height: '350px' }}
+                          useResizeHandler={true}
                         />
                       </CardContent>
                     </Card>
                   )}
                   
                   {/* 5. ArNS Resolution - Time Series */}
-                  {prometheusMetrics.metrics.arns && (
+                  {prometheusMetrics.metrics.arns && Array.isArray(prometheusMetrics.metrics.arns) && (
                     <Card className="bg-gray-800 border-gray-700">
                       <CardHeader>
                         <CardTitle className="text-white text-lg">ArNS Resolution</CardTitle>
@@ -1019,13 +1164,14 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
           autosizable: true
         }}
                           style={{ width: '100%', height: '350px' }}
+                          useResizeHandler={true}
                         />
                       </CardContent>
                     </Card>
                   )}
                   
                   {/* 6. ArNS Cache Hit Rate - Time Series */}
-                  {prometheusMetrics.metrics.arns && (
+                  {prometheusMetrics.metrics.arns && Array.isArray(prometheusMetrics.metrics.arns) && (
                     <Card className="bg-gray-800 border-gray-700">
                       <CardHeader>
                         <CardTitle className="text-white text-lg">ArNS Cache Hit Rate</CardTitle>
@@ -1064,6 +1210,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
           autosizable: true
         }}
                           style={{ width: '100%', height: '350px' }}
+                          useResizeHandler={true}
                         />
                       </CardContent>
                     </Card>
@@ -1105,6 +1252,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
           autosizable: true
         }}
                         style={{ width: '100%', height: '350px' }}
+                        useResizeHandler={true}
                       />
                     </CardContent>
                   </Card>
@@ -1145,6 +1293,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
           autosizable: true
         }}
                         style={{ width: '100%', height: '350px' }}
+                        useResizeHandler={true}
                       />
                     </CardContent>
                   </Card>
@@ -1185,6 +1334,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
           autosizable: true
         }}
                         style={{ width: '100%', height: '350px' }}
+                        useResizeHandler={true}
                       />
                     </CardContent>
                   </Card>
@@ -1233,6 +1383,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
           autosizable: true
         }}
                         style={{ width: '100%', height: '350px' }}
+                        useResizeHandler={true}
                       />
                     </CardContent>
                   </Card>

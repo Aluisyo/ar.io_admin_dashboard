@@ -36,6 +36,7 @@ import {
   generateRuleId, 
   validateFilter 
 } from '@/lib/filter-utils'
+import { getApiUrl } from '@/lib/api-utils'
 
 interface BundlerFilterConfig {
   name: string
@@ -102,7 +103,7 @@ export function EnhancedBundlerVisualFiltersBuilder({ service }: EnhancedBundler
   const fetchBundlerFilters = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/bundler-filters')
+      const response = await fetch(getApiUrl('/bundler-filters'))
       if (response.ok) {
         const data = await response.json()
         console.log('Bundler API Response data:', data)
@@ -328,7 +329,7 @@ export function EnhancedBundlerVisualFiltersBuilder({ service }: EnhancedBundler
         }
       }
       
-      const response = await fetch('/api/bundler-filters', {
+      const response = await fetch(getApiUrl('/bundler-filters'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(filterData)

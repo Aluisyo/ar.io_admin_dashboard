@@ -24,9 +24,25 @@ export async function GET(
     const isTailing = searchParams.get('tail') === 'true'; // Check if this is a tailing request
     const sinceTimestamp = searchParams.get('since'); // Get since timestamp for tailing
     
+    console.log(`Fetching logs for service: ${service}`);
+    
+    // Validate service name
+    if (!service || typeof service !== 'string') {
+      return new NextResponse('Invalid service name', {
+        status: 400,
+        headers: { 'Content-Type': 'text/plain' },
+      })
+    }
+    
     // First try to find the container using docker compose
-    const { stdout: composeOutput } = await execAsync(`docker compose -p ar-io-node ps ${service} --format "{{.Name}}" 2>/dev/null || echo ""`)
-    let containerName = composeOutput.trim()
+    let containerName = ''
+    try {
+      const { stdout: composeOutput } = await execAsync(`docker compose -p ar-io-node ps ${service} --format "{{.Name}}" 2>/dev/null || echo ""`)
+      containerName = composeOutput.trim()
+      console.log(`Docker compose found container: ${containerName}`);
+    } catch (composeError) {
+      console.log('Docker compose not available or failed, using fallback container mapping');
+    }
 
     // If not found via compose, try the manual mapping
     if (!containerName) {
@@ -43,6 +59,19 @@ export async function GET(
         'admin': 'ar-io-node-admin-dashboard-1'
       }
       containerName = containerMap[service] || `ar-io-node-${service}-1`
+      console.log(`Using fallback container name: ${containerName}`);
+    }
+    
+    // Check if container exists
+    try {
+      await execAsync(`docker inspect ${containerName} > /dev/null 2>&1`);
+      console.log(`Container ${containerName} exists`);
+    } catch (inspectError) {
+      console.error(`Container ${containerName} does not exist`);
+      return new NextResponse(`Container ${containerName} not found. Service '${service}' may not be running.`, {
+        status: 404,
+        headers: { 'Content-Type': 'text/plain' },
+      })
     }
 
     // Base docker logs command
@@ -103,6 +132,7 @@ export async function GET(
     
     logsCommand += ` || echo "No logs available"`; // Fallback if grep finds nothing or command fails
 
+    console.log(`Executing logs command: ${logsCommand}`);
     const { stdout: logsOutput } = await execAsync(logsCommand);
 
     return new NextResponse(logsOutput, {
@@ -110,9 +140,10 @@ export async function GET(
         'Content-Type': 'text/plain',
       },
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching container logs:', error)
-    return new NextResponse('Error fetching logs', {
+    const errorMessage = error?.message || 'Unknown error occurred while fetching logs'
+    return new NextResponse(`Error fetching logs: ${errorMessage}`, {
       status: 500,
       headers: {
         'Content-Type': 'text/plain',

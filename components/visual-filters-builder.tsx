@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Plus, X, Save, RefreshCw, Code, Eye, HelpCircle, CheckCircle, AlertCircle, List } from 'lucide-react'
 import { FilterExamples } from '@/components/filter-examples'
+import { getApiUrl } from '@/lib/api-utils'
 
 interface FilterRule {
   id: string
@@ -101,7 +102,7 @@ export function VisualFiltersBuilder({ service }: VisualFiltersBuilderProps) {
   const fetchFilters = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/filters')
+      const response = await fetch(getApiUrl('/filters'))
       if (response.ok) {
         const data = await response.json()
         
@@ -303,7 +304,7 @@ export function VisualFiltersBuilder({ service }: VisualFiltersBuilderProps) {
     try {
       const filterData = JSON.parse(codeView)
       
-      const response = await fetch('/api/filters', {
+      const response = await fetch(getApiUrl('/filters'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(filterData)

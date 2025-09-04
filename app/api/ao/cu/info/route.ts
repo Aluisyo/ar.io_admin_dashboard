@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from "next-auth/next"
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
 interface AOCUInfo {
   address: string
@@ -33,6 +35,11 @@ async function fetchWithTimeout(url: string, timeoutMs: number = 5000): Promise<
 }
 
 export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const endpoints = [...AO_CU_ENDPOINTS]
   let lastError: string | null = null
 

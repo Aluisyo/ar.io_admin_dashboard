@@ -105,8 +105,9 @@ async function tryFetchMetrics(urls: string[]): Promise<{ response: Response, ur
         method: 'GET',
         headers: {
           'Accept': 'text/plain',
+          'User-Agent': 'AR.IO-Admin-Dashboard/1.0'
         },
-        signal: AbortSignal.timeout(5000)
+        signal: AbortSignal.timeout(8000) // Increased timeout for slower networks
       })
       
       if (response.ok) {
@@ -132,10 +133,12 @@ export async function GET(request: NextRequest) {
     // Define possible endpoints for AR.IO Gateway metrics
     // Try Docker network hostname first, then localhost
     const gatewayUrls = [
-      'http://envoy:3000/ar-io/__gateway_metrics',     // Docker network
-      'http://localhost:3000/ar-io/__gateway_metrics', // Local development
-      'http://core:4000/ar-io/__gateway_metrics',      // Direct to core service
-      'http://localhost:4000/ar-io/__gateway_metrics'  // Local core service
+      'http://ar-io-node-envoy-1:3000/ar-io/__gateway_metrics',     // Docker network (full container name)
+      'http://ar-io-node-core-1:4000/ar-io/__gateway_metrics',      // Docker network (direct to core - full container name)
+      'http://envoy:3000/ar-io/__gateway_metrics',                   // Docker network (short alias)
+      'http://core:4000/ar-io/__gateway_metrics',                    // Docker network (direct to core - short alias)
+      'http://localhost:3000/ar-io/__gateway_metrics',               // Local development (via envoy)
+      'http://localhost:4000/ar-io/__gateway_metrics'                // Local development (direct to core)
     ]
     
     // Try AR.IO Gateway metrics first (most important)

@@ -16,6 +16,7 @@ import {
 import { Play, AlertTriangle, Database } from 'lucide-react'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { getApiUrl } from '@/lib/api-utils'
 
 interface DatabaseQueryTabProps {
   service: string
@@ -36,7 +37,7 @@ export function DatabaseQueryTab({ service }: DatabaseQueryTabProps) {
     setResult('')
 
     try {
-      const response = await fetch('/api/database/query', {
+      const response = await fetch(getApiUrl('/api/database/query'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Plus, X, Save, RefreshCw, Code, Eye } from 'lucide-react'
+import { getApiUrl } from '@/lib/api-utils'
 
 interface FilterRule {
   id: string
@@ -90,7 +91,7 @@ export function VisualIndexFiltersBuilder({ service }: VisualIndexFiltersBuilder
   const fetchFilters = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/index-filters')
+      const response = await fetch(getApiUrl('/index-filters'))
       if (response.ok) {
         const data = await response.json()
         
@@ -266,7 +267,7 @@ export function VisualIndexFiltersBuilder({ service }: VisualIndexFiltersBuilder
     try {
       const filterData = JSON.parse(codeView)
       
-      const response = await fetch('/api/index-filters', {
+      const response = await fetch(getApiUrl('/index-filters'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(filterData)

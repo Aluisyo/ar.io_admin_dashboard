@@ -28,18 +28,37 @@ export async function POST() {
     const timestamp = new Date().toISOString().replace(/[:.-]/g, '_')
     const backupFileName = `config_backup_${timestamp}.tar.gz`
     
-    const userBackupDir = join(process.env.HOME || '/tmp', 'ar-io-backups')
-    const backupFilePath = join(userBackupDir, backupFileName)
-
-    if (!existsSync(userBackupDir)) {
-      mkdirSync(userBackupDir, { recursive: true, mode: 0o755 })
+    // Try multiple backup directory options
+    const possibleDirs = [
+      join(process.env.HOME || '/tmp', 'ar-io-backups'),
+      join('/tmp', 'ar-io-backups'),
+      join(arIoNodePath, 'backups')
+    ]
+    
+    let userBackupDir = ''
+    let backupFilePath = ''
+    
+    for (const dir of possibleDirs) {
+      try {
+        if (!existsSync(dir)) {
+          mkdirSync(dir, { recursive: true, mode: 0o755 })
+        }
+        await access(dir, constants.W_OK)
+        userBackupDir = dir
+        backupFilePath = join(dir, backupFileName)
+        console.log(`Using backup directory: ${dir}`)
+        break
+      } catch (permError) {
+        console.warn(`Cannot access backup directory ${dir}:`, permError.message)
+        continue
+      }
     }
-
-    try {
-      await access(userBackupDir, constants.W_OK)
-    } catch (permError) {
-      console.error('Cannot write to backup directory:', permError)
-      return NextResponse.json({ error: 'Cannot access backup directory' }, { status: 500 })
+    
+    if (!userBackupDir) {
+      return NextResponse.json({ 
+        error: 'Cannot access any backup directory. Please check file permissions.',
+        details: `Tried: ${possibleDirs.join(', ')}`
+      }, { status: 500 })
     }
 
     const findCommand = `find "${arIoNodePath}" -maxdepth 1 -name "*.env*" -type f`

@@ -15,6 +15,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { LayoutDashboard, Server, Eye, Network, Heart, Database, Zap, BarChart3, Cpu, Package, Gauge, Upload, HardDrive, Activity } from 'lucide-react'
 import { ChevronDown } from 'lucide-react'
 import Image from 'next/image'
+import { AR_IO_LOGO_BASE64 } from '@/lib/constants'
 
 interface AppSidebarProps {
   activeSection: string
@@ -46,7 +47,7 @@ export function AppSidebar({ activeSection, onSectionChange }: AppSidebarProps) 
       <SidebarHeader className="border-b border-gray-800 p-6">
         <div className="flex items-center space-x-3">
           <Image 
-            src="/ar-io-logo.png" 
+            src={AR_IO_LOGO_BASE64}
             alt="AR.IO" 
             width={40} 
             height={40} 

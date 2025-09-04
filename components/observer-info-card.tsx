@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Eye, Wallet, Clock, BarChart3, CheckCircle, AlertTriangle, Copy, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { getApiUrl } from '@/lib/api-utils'
 
 interface ObserverReport {
   formatVersion: number
@@ -38,7 +39,14 @@ export function ObserverInfoCard() {
     }
     setError(null)
     try {
-      const response = await fetch('/api/observer/current-report')
+      const response = await fetch(getApiUrl('/observer/current-report'))
+      
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Server returned ${contentType || 'non-JSON'} instead of JSON. This might be an authentication or routing issue.`)
+      }
+      
       const data = await response.json()
       
       if (response.ok) {
@@ -48,7 +56,11 @@ export function ObserverInfoCard() {
         setObserverReport(data)
       }
     } catch (error: any) {
-      setError(`Network error: ${error.message}`)
+      if (error.message.includes('Unexpected token')) {
+        setError('Server returned HTML instead of JSON - likely an authentication or API routing issue')
+      } else {
+        setError(`Network error: ${error.message}`)
+      }
       setObserverReport(null)
     } finally {
       setLoading(false)
