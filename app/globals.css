@@ -191,31 +191,45 @@
     scrollbar-color: #4b5563 #1f2937; /* thumb track */
   }
   
-  /* Prevent text overflow and ensure proper wrapping */
-  .logs-container {
-    @apply relative w-full overflow-hidden;
-  }
   
-  .logs-content {
-    @apply w-full h-full overflow-auto;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    hyphens: auto;
-  }
-  
-  /* Ensure responsive behavior */
-  @media (max-width: 640px) {
-    .dashboard-card {
-      @apply mx-2;
+  /* Mobile-optimized tab scrolling */
+  @media (max-width: 768px) {
+    /* Smooth horizontal scrolling for tabs on mobile */
+    [data-radix-tabs-list] {
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE and Edge */
+      padding-bottom: 2px; /* Prevent cut-off */
     }
     
-    .logs-container {
-      @apply min-h-[300px] max-h-[400px];
+    /* Hide scrollbar for webkit browsers */
+    [data-radix-tabs-list]::-webkit-scrollbar {
+      display: none;
     }
-  }
-  
-  /* Ensure containers don't overflow viewport */
-  .main-content {
-    @apply w-full max-w-full overflow-x-hidden;
+    
+    /* Ensure tab triggers maintain minimum touch target size and proper spacing */
+    [data-radix-tabs-trigger] {
+      min-height: 44px;
+      min-width: fit-content;
+      flex-shrink: 0;
+    }
+    
+    /* Add scroll indicators for mobile */
+    [data-radix-tabs-list]::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 20px;
+      height: 100%;
+      background: linear-gradient(to left, rgba(17, 24, 39, 0.8), transparent);
+      pointer-events: none;
+    }
+    
+    /* Add padding to the right to show there's more content */
+    [data-radix-tabs-list] {
+      padding-right: 20px;
+    }
   }
 }
