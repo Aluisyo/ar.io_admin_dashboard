@@ -146,26 +146,17 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
     window.open(prometheusUrl, '_blank');
   };
 
-  // Mobile-first approach: always use horizontal scroll on mobile, grid only on larger screens
-  const getTabLayoutClass = () => {
-    // Count total tabs for this service
-    let tabCount = 4; // base tabs: overview, metrics, configuration, logs
-    if (service === 'gateway') tabCount = 7; // + admin-endpoint, index-filters, database-query
-    else if (service === 'bundler') tabCount = 5; // + bundler-filters  
-    else if (service === 'grafana') tabCount = 6; // + grafana-dashboard, prometheus-dashboard
-    else if (service === 'clickhouse') tabCount = 5; // + database-query
-    
-    // Use horizontal scroll on mobile (sm and below), grid on larger screens
-    return `flex md:grid overflow-x-auto md:overflow-x-visible`;
-  };
-  
-  const getTabGridClass = () => {
-    if (service === 'gateway') return 'md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7';
-    if (service === 'bundler') return 'md:grid-cols-4 lg:grid-cols-5';
-    if (service === 'grafana') return 'md:grid-cols-4 lg:grid-cols-6';
-    if (service === 'clickhouse') return 'md:grid-cols-4 lg:grid-cols-5';
-    return 'md:grid-cols-4';
-  };
+  // Calculate grid columns based on service-specific tabs (original consistent approach)
+  let tabColsClass = 'grid-cols-4';
+  if (service === 'gateway') {
+    tabColsClass = 'grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7';
+  } else if (service === 'bundler') {
+    tabColsClass = 'grid-cols-4 lg:grid-cols-5';
+  } else if (service === 'grafana') {
+    tabColsClass = 'grid-cols-4 lg:grid-cols-6';
+  } else if (service === 'clickhouse') {
+    tabColsClass = 'grid-cols-4 lg:grid-cols-5';
+  }
 
   return (
     <div className="space-y-6">
@@ -208,40 +199,40 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className={`relative w-full ${getTabLayoutClass()} ${getTabGridClass()} bg-gray-900 border border-gray-800 p-1 gap-1`}>
-          <TabsTrigger value="overview" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:text-black whitespace-nowrap flex-shrink-0 px-3 sm:px-4 py-2">
-            <Activity className="h-4 w-4 flex-shrink-0" />
-            <span className="text-sm md:text-base">Overview</span>
+        <TabsList className={`relative w-full grid ${tabColsClass} bg-gray-900 border border-gray-800 p-1 gap-1 overflow-x-auto sm:overflow-x-visible`}>
+          <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black">
+            <Activity className="h-4 w-4" />
+            Overview
           </TabsTrigger>
-          <TabsTrigger value="metrics" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:text-black whitespace-nowrap flex-shrink-0 px-3 sm:px-4 py-2">
-            <BarChart3 className="h-4 w-4 flex-shrink-0" />
-            <span className="text-sm md:text-base">Metrics</span>
+          <TabsTrigger value="metrics" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black">
+            <BarChart3 className="h-4 w-4" />
+            Metrics
           </TabsTrigger>
-          <TabsTrigger value="configuration" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:text-black whitespace-nowrap flex-shrink-0 px-3 sm:px-4 py-2">
-            <Settings className="h-4 w-4 flex-shrink-0" />
-            <span className="text-sm md:text-base">Config</span>
+          <TabsTrigger value="configuration" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black">
+            <Settings className="h-4 w-4" />
+            Configuration
           </TabsTrigger>
-          <TabsTrigger value="logs" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:text-black whitespace-nowrap flex-shrink-0 px-3 sm:px-4 py-2">
-            <FileText className="h-4 w-4 flex-shrink-0" />
-            <span className="text-sm md:text-base">Logs</span>
+          <TabsTrigger value="logs" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black">
+            <FileText className="h-4 w-4" />
+            Logs
           </TabsTrigger>
           {service === 'gateway' && (
             <>
-              <TabsTrigger value="admin-endpoint" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:text-black text-gray-300 whitespace-nowrap flex-shrink-0 px-3 sm:px-4 py-2">
-                <Server className="h-4 w-4 text-gray-300 data-[state=active]:text-black flex-shrink-0" />
-                <span className="text-sm md:text-base">Admin</span>
+              <TabsTrigger value="admin-endpoint" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black text-gray-300">
+                <Server className="h-4 w-4 text-gray-300 data-[state=active]:text-black flex-shrink-0" style={{ display: 'inline-block', minWidth: '1rem', minHeight: '1rem' }} />
+                Admin Endpoint
               </TabsTrigger>
-              <TabsTrigger value="index-filters" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:text-black whitespace-nowrap flex-shrink-0 px-3 sm:px-4 py-2">
-                <Filter className="h-4 w-4 flex-shrink-0" />
-                <span className="text-sm md:text-base">Filters</span>
+              <TabsTrigger value="index-filters" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black">
+                <Filter className="h-4 w-4" />
+                Filters
               </TabsTrigger>
             </>
           )}
 
           {service === 'bundler' && (
-            <TabsTrigger value="bundler-filters" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:text-black whitespace-nowrap flex-shrink-0 px-3 sm:px-4 py-2">
-              <Filter className="h-4 w-4 flex-shrink-0" />
-              <span className="text-sm md:text-base">Filters</span>
+            <TabsTrigger value="bundler-filters" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black">
+              <Filter className="h-4 w-4" />
+              Filters
             </TabsTrigger>
           )}
 
@@ -249,10 +240,10 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
             <TabsTrigger
               value="grafana-dashboard"
               onClick={handleGrafanaDashboardClick}
-              className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:text-black whitespace-nowrap flex-shrink-0 px-3 sm:px-4 py-2"
+              className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black"
             >
-              <LayoutDashboard className="h-4 w-4 flex-shrink-0" />
-              <span className="text-sm md:text-base">Grafana</span>
+              <LayoutDashboard className="h-4 w-4" />
+              Grafana Dashboard
             </TabsTrigger>
           )}
 
@@ -260,20 +251,20 @@ export function ServiceTabs({ service }: ServiceTabsProps) {
             <TabsTrigger
               value="prometheus-dashboard"
               onClick={handlePrometheusDashboardClick}
-              className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:text-black whitespace-nowrap flex-shrink-0 px-3 sm:px-4 py-2"
+              className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black"
             >
-              <TrendingUp className="h-4 w-4 flex-shrink-0" />
-              <span className="text-sm md:text-base">Prometheus</span>
+              <TrendingUp className="h-4 w-4" />
+              Prometheus
             </TabsTrigger>
           )}
 
           {(service === 'gateway' || service === 'clickhouse') && (
             <TabsTrigger
               value="database-query"
-              className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:text-black whitespace-nowrap flex-shrink-0 px-3 sm:px-4 py-2"
+              className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-black"
             >
-              <Database className="h-4 w-4 text-gray-300 data-[state=active]:text-black flex-shrink-0" />
-              <span className="text-sm md:text-base">Database</span>
+              <Database className="h-4 w-4 text-gray-300 data-[state=active]:text-black flex-shrink-0" style={{ display: 'inline-block', minWidth: '1rem', minHeight: '1rem' }} />
+              Database Query
             </TabsTrigger>
           )}
         </TabsList>

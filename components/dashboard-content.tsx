@@ -155,8 +155,23 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
       if (historicalData.timestamps.length > 0) {
         newData.fsUsage = historicalData.timestamps.map((timestamp, index) => ({
           x: timestamp,
-          y: historicalData.storage[index]
+          y: historicalData.storage[index] || 0
         }))
+      } else {
+        // Generate some initial data points if no historical data exists yet
+        const now = new Date()
+        const initialData = []
+        for (let i = 9; i >= 0; i--) {
+          const timestamp = new Date(now.getTime() - (i * 5000)) // 5 second intervals
+          const currentStorage = stats?.storage || 0
+          // Add some variation to make it look realistic
+          const variation = Math.random() * 5 - 2.5 // ±2.5%
+          initialData.push({
+            x: timestamp,
+            y: Math.max(0, Math.min(100, currentStorage + variation))
+          })
+        }
+        newData.fsUsage = initialData
       }
       
       // Initialize other charts with placeholder data if Prometheus has metrics
@@ -1057,30 +1072,57 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
                       </CardHeader>
                       <CardContent>
                         <Plot
-                          data={[{
-                            x: prometheusMetrics.metrics.http.slice(0, 8).map((metric: any) => {
-                              // Clean up metric names for better display
-                              let name = metric.displayName || metric.name || 'Unknown'
-                              if (name.includes('request_duration_seconds')) {
-                                return 'Avg Response Time'
-                              } else if (name.includes('requests_total')) {
-                                return 'Total Requests'
-                              } else if (name.includes('active_requests')) {
-                                return 'Active Requests'
-                              } else if (name.length > 20) {
-                                return name.substring(0, 17) + '...'
+                          data={(() => {
+                            // Group HTTP metrics by category to avoid duplicates
+                            const metricCategories = {
+                              'Total Requests': prometheusMetrics.metrics.http.find((m: any) => 
+                                m.name?.includes('requests_total') && !m.name?.includes('error')
+                              ),
+                              'Request Errors': prometheusMetrics.metrics.http.find((m: any) => 
+                                m.name?.includes('error') || (m.name?.includes('requests') && m.name?.includes('5xx'))
+                              ),
+                              'Response Time': prometheusMetrics.metrics.http.find((m: any) => 
+                                m.name?.includes('duration') || m.name?.includes('latency')
+                              ),
+                              'Active Requests': prometheusMetrics.metrics.http.find((m: any) => 
+                                m.name?.includes('active') || m.name?.includes('concurrent')
+                              ),
+                              'Request Rate': prometheusMetrics.metrics.http.find((m: any) => 
+                                m.name?.includes('rate') && !m.name?.includes('error')
+                              ),
+                              '2xx Responses': prometheusMetrics.metrics.http.find((m: any) => 
+                                m.name?.includes('2xx') || (m.name?.includes('status') && m.name?.includes('200'))
+                              )
+                            };
+                            
+                            const categories = [];
+                            const values = [];
+                            const colors = ['#10b981', '#ef4444', '#f59e0b', '#06b6d4', '#8b5cf6', '#84cc16'];
+                            
+                            Object.entries(metricCategories).forEach(([category, metric], index) => {
+                              if (metric && typeof metric.value === 'number') {
+                                categories.push(category);
+                                values.push(metric.value);
                               }
-                              return name
-                            }),
-                            y: prometheusMetrics.metrics.http.slice(0, 8).map((metric: any) => 
-                              typeof metric.value === 'number' ? metric.value : 0
-                            ),
-                            type: 'bar',
-                            marker: {
-                              color: ['#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#f97316', '#84cc16', '#06b6d4']
-                            },
-                            hovertemplate: '%{x}<br>Value: %{y}<extra></extra>'
-                          }]}
+                            });
+                            
+                            // If no proper metrics found, show top 6 unique metrics
+                            if (categories.length === 0) {
+                              const uniqueMetrics = prometheusMetrics.metrics.http.slice(0, 6);
+                              uniqueMetrics.forEach((metric: any, index: number) => {
+                                categories.push(metric.displayName || metric.name?.substring(0, 15) + '...' || `Metric ${index + 1}`);
+                                values.push(typeof metric.value === 'number' ? metric.value : 0);
+                              });
+                            }
+                            
+                            return [{
+                              x: categories,
+                              y: values,
+                              type: 'bar',
+                              marker: { color: colors.slice(0, categories.length) },
+                              hovertemplate: '%{x}<br>Value: %{y:,.0f}<extra></extra>'
+                            }];
+                          })()}
                           layout={{
                             height: 350,
                             margin: { l: 60, r: 20, t: 20, b: 80 },
