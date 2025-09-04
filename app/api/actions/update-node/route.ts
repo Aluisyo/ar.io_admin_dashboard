@@ -310,31 +310,96 @@ export async function POST(request: Request) {
           ? `Local version ${currentLocalVersion} < Latest ${latestReleaseTag}`
           : `Local version ${currentLocalVersion} >= Latest ${latestReleaseTag}`
       } else {
-        // If we can't determine versions, proceed with git pull to check for changes
-        updateNeeded = true
-        versionCheckReason = 'Unable to determine versions - will check Git repository'
+        // If we can't determine versions, do a lightweight Git check to see if there are changes
+        console.log('Unable to determine versions from API calls, checking Git repository for changes...')
+        try {
+          // Fetch latest info from remote without merging
+          const fetchCommand = `cd "${arIoNodePath}" && git fetch origin main --dry-run`
+          await execAsync(fetchCommand)
+          
+          // Check if local is behind remote
+          const behindCommand = `cd "${arIoNodePath}" && git rev-list --count HEAD..origin/main`
+          const { stdout: behindCount } = await execAsync(behindCommand)
+          const commitsBehind = parseInt(behindCount.trim()) || 0
+          
+          updateNeeded = commitsBehind > 0
+          versionCheckReason = updateNeeded 
+            ? `Local repository is ${commitsBehind} commit${commitsBehind !== 1 ? 's' : ''} behind origin/main`
+            : 'Local repository is up to date with origin/main'
+            
+          console.log(`Git check result: ${commitsBehind} commits behind, update needed: ${updateNeeded}`)
+        } catch (gitCheckError) {
+          console.log('Git repository check failed, will proceed with update as fallback:', gitCheckError)
+          updateNeeded = true
+          versionCheckReason = 'Git repository check failed - proceeding with update as safety fallback'
+        }
       }
       
       console.log('Update needed:', updateNeeded, '- Reason:', versionCheckReason)
       
       if (!updateNeeded) {
-        return NextResponse.json({ 
-          success: true, 
-          message: 'AR.IO Node is already up to date. No update needed.',
-          details: {
-            stepsCompleted: ['Version check completed - no update needed'],
-            versionCheck: {
-              currentGatewayVersion,
-              latestReleaseTag,
-              currentLocalVersion,
-              updateNeeded: false,
-              reason: versionCheckReason
-            },
-            repositoryUpdated: false,
-            networkTrafficAvoided: true,
-            bandwidthSaved: true
+        console.log('No update needed - checking Docker images for completeness...')
+        
+        // Quick Docker image check to see if we have the current images
+        let dockerImageStatus = 'Not checked'
+        try {
+          // Check if we have the Docker images for the current version
+          const dockerImagesCommand = `cd "${arIoNodePath}" && docker compose -f docker-compose.yaml config --images`
+          const { stdout: requiredImages } = await execAsync(dockerImagesCommand)
+          const imageList = requiredImages.trim().split('\n').filter(img => img.trim())
+          
+          console.log(`Checking ${imageList.length} required Docker images...`)
+          
+          let allImagesPresent = true
+          for (const image of imageList) {
+            try {
+              const checkImageCommand = `docker image inspect ${image.trim()} --format="{{.Id}}" 2>/dev/null`
+              await execAsync(checkImageCommand)
+            } catch {
+              console.log(`Missing Docker image: ${image.trim()}`)
+              allImagesPresent = false
+              break
+            }
           }
-        })
+          
+          dockerImageStatus = allImagesPresent ? 'All images present' : 'Some images missing'
+          console.log('Docker image check result:', dockerImageStatus)
+          
+          // If images are missing, we might need to update after all
+          if (!allImagesPresent) {
+            console.log('Docker images are missing, proceeding with update to pull/build images')
+            updateNeeded = true
+            versionCheckReason += ' (Docker images missing)'
+          }
+          
+        } catch (dockerCheckError) {
+          console.log('Docker image check failed (non-critical):', dockerCheckError)
+          dockerImageStatus = 'Check failed - assuming images present'
+        }
+        
+        // If still no update needed after Docker check
+        if (!updateNeeded) {
+          return NextResponse.json({ 
+            success: true, 
+            message: 'AR.IO Node is already up to date. No update needed.',
+            details: {
+              stepsCompleted: ['Version check completed - no update needed', `Docker image status: ${dockerImageStatus}`],
+              versionCheck: {
+                currentGatewayVersion,
+                latestReleaseTag,
+                currentLocalVersion,
+                updateNeeded: false,
+                reason: versionCheckReason
+              },
+              dockerImageStatus,
+              repositoryUpdated: false,
+              dockerImagesUpdated: false,
+              networkTrafficAvoided: true,
+              bandwidthSaved: true,
+              servicesNotRestarted: true
+            }
+          })
+        }
       }
       
       updateSteps.push(`Version check: ${versionCheckReason}`)
@@ -406,6 +471,54 @@ export async function POST(request: Request) {
       if (gitError && !gitError.includes('Already up to date')) {
         console.log('Git pull warnings/info:', gitError)
       }
+      
+      // Check if Git pull actually brought in changes
+      const gitRepositoryUpdated = !gitOutput.includes('Already up to date')
+      console.log(`Git repository updated: ${gitRepositoryUpdated}`)
+      
+      if (!gitRepositoryUpdated && !forceUpdate) {
+        console.log('Git repository is already up to date, checking if Docker images need updates...')
+        
+        // Quick check if Docker images are up to date
+        let dockerUpdateNeeded = false
+        try {
+          const dockerPullCheckCommand = `cd "${arIoNodePath}" && docker compose -f docker-compose.yaml pull --dry-run 2>&1 || echo "dry-run not supported"`
+          const { stdout: dockerPullCheck } = await execAsync(dockerPullCheckCommand)
+          
+          // If dry-run isn't supported, do a quick image freshness check
+          if (dockerPullCheck.includes('dry-run not supported')) {
+            console.log('Docker dry-run not supported, assuming images may need update')
+            dockerUpdateNeeded = true // Conservative approach
+          } else {
+            dockerUpdateNeeded = dockerPullCheck.includes('Pulling') || dockerPullCheck.includes('Pull complete')
+          }
+        } catch (dockerCheckError) {
+          console.log('Docker update check failed, assuming update needed:', dockerCheckError)
+          dockerUpdateNeeded = true // Conservative fallback
+        }
+        
+        console.log(`Docker update needed: ${dockerUpdateNeeded}`)
+        
+        if (!dockerUpdateNeeded) {
+          console.log('Neither Git nor Docker updates needed, skipping service restart')
+          
+          return NextResponse.json({ 
+            success: true, 
+            message: 'AR.IO Node is already up to date. No changes found.',
+            details: {
+              stepsCompleted: [...updateSteps, 'Repository check: No changes found', 'Docker check: Images up to date', 'Services not restarted - no changes detected'],
+              repositoryUpdated: false,
+              dockerImagesUpdated: false,
+              servicesRestarted: false,
+              gitPullOutput: gitOutput.trim(),
+              networkTrafficSaved: true,
+              servicesRunning: 'Not checked (no restart needed)',
+              totalServices: 'Not checked (no restart needed)'
+            }
+          })
+        }
+      }
+      
     } catch (gitError) {
       console.error('Git pull failed:', gitError)
       throw new Error(`Failed to update Git repository: ${gitError instanceof Error ? gitError.message : 'Unknown git error'}`)

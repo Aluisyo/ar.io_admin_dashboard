@@ -88,12 +88,42 @@ export const notifyBackup = (details?: { filesBackedUp: number, fileSize: string
   return addSuccessNotification(message);
 };
 
-export const notifyUpdate = (details?: { servicesRunning: number, totalServices: number, imagesUpdated: boolean }) => {
-  if (details && !details.imagesUpdated) {
+export const notifyUpdate = (details?: { 
+  servicesRunning?: number, 
+  totalServices?: number, 
+  imagesUpdated?: boolean,
+  dockerImagesUpdated?: boolean,
+  repositoryUpdated?: boolean,
+  networkTrafficAvoided?: boolean,
+  bandwidthSaved?: boolean,
+  stepsCompleted?: string[]
+}) => {
+  // Handle case where no update was needed
+  if (details?.networkTrafficAvoided === true || details?.bandwidthSaved === true) {
     return addInfoNotification('AR.IO Node checked for updates - already up to date');
   }
   
-  const message = details 
+  // Handle case where no changes were found
+  if (details && details.repositoryUpdated === false && details.dockerImagesUpdated === false) {
+    return addInfoNotification('AR.IO Node checked for updates - already up to date');
+  }
+  
+  // Handle successful update case
+  if (details && (details.repositoryUpdated === true || details.dockerImagesUpdated === true)) {
+    let updateParts = [];
+    if (details.repositoryUpdated) updateParts.push('code');
+    if (details.dockerImagesUpdated) updateParts.push('images');
+    
+    const updateInfo = updateParts.length > 0 ? ` (updated: ${updateParts.join(', ')})` : '';
+    const servicesInfo = details.servicesRunning && details.totalServices 
+      ? ` - ${details.servicesRunning}/${details.totalServices} services running`
+      : '';
+    
+    return addSuccessNotification(`AR.IO Node updated successfully${updateInfo}${servicesInfo}`);
+  }
+  
+  // Fallback for backwards compatibility or unknown cases
+  const message = details && details.servicesRunning && details.totalServices
     ? `AR.IO Node updated successfully: ${details.servicesRunning}/${details.totalServices} services running`
     : 'AR.IO Node updated successfully';
   return addSuccessNotification(message);

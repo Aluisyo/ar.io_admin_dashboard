@@ -354,7 +354,7 @@ export function DashboardContent({ onSectionChange }: DashboardContentProps) {
           successMessage += ` (${data.details.filesBackedUp} files, ${data.details.fileSize}) - saved to ${data.details.backupPath}`
         } else if (data.details && actionType === 'update-node') {
           if (data.details.networkTrafficAvoided === true) {
-            successMessage = 'AR.IO Node is already up to date. No updates needed (bandwidth saved).'
+            successMessage = 'AR.IO Node is already up to date. No updates needed.'
           } else if (data.details.repositoryUpdated === false && data.details.dockerImagesUpdated === false) {
             successMessage = 'AR.IO Node is already up to date. No updates needed.'
           } else {
