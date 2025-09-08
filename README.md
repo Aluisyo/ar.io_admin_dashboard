@@ -106,17 +106,6 @@ docker run -d \
   aluisyo/ar.io_admin_dashboard:latest
 ```
 
-### Docker Compatibility Features
-
-✅ **Full AR.IO Gateway Update Support**: The containerized dashboard can update AR.IO Gateway instances running on the same Docker host
-
-✅ **Smart Network Detection**: Automatically tries multiple network endpoints to connect to AR.IO Gateway services
-
-✅ **Volume Path Mapping**: Properly maps host AR.IO node directory into container for Git operations
-
-✅ **Docker Socket Access**: Container can control other Docker containers via mounted Docker socket
-
-✅ **Environment Flexibility**: Supports configurable paths and ports via environment variables
 
 ## License
 
